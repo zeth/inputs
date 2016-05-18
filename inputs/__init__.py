@@ -6,7 +6,9 @@ import glob
 import struct
 from collections import namedtuple
 from warnings import warn
-from inputs.constants import EVENT_FORMAT, EVENT_SIZE
+from inputs.constants import EVENT_FORMAT, EVENT_SIZE, KEYS_AND_BUTTONS
+
+EV_KEY = 0x01
 
 # pylint: disable=too-few-public-methods
 
@@ -31,11 +33,25 @@ def get_gamepad():
     pass
 
 
-InputEvent = namedtuple('InputEvent', ('timestamp', 'key', 'state', 'type'))
+class InputEvent(object):
+    """A user event."""
+    def __init__(self,
+                 device,
+                 timestamp=None,
+                 code=None,
+                 state=None,
+                 ev_type=None):
+        self.device = device
+        self.timestamp = timestamp
+        self.code = code
+        self.state = state
+        self.ev_type = ev_type
+
 
 class InputDevice(object):
     """A user input device."""
-    def __init__(self, device_path):
+    def __init__(self, manager, device_path):
+        self.manager = manager
         self._device_path = device_path
         long_identifier = device_path.split('/')[4]
         self.protocol, remainder = long_identifier.split('-', 1)
@@ -68,10 +84,16 @@ class InputDevice(object):
     def __iter__(self):
         while True:
             event = self._character_device.read(EVENT_SIZE)
-            (tv_sec, tv_usec, ev_type, code, value) = struct.unpack(EVENT_FORMAT, event)
+            (tv_sec, tv_usec, ev_type, code, value) = struct.unpack(
+                EVENT_FORMAT, event)
             print((tv_sec, tv_usec, ev_type, code, value))
-            #if ev_type == self.EV_KEY:
-            yield InputEvent(tv_sec + (tv_usec / 1000000), code, value, ev_type)
+            if ev_type == EV_KEY:
+                print(tv_sec + (tv_usec / 1000000))
+                yield InputEvent(self,
+                                 tv_sec + (tv_usec / 1000000),
+                                 code,
+                                 value,
+                                 ev_type)
 
     def read(self):
         """Read the next input event."""
@@ -105,6 +127,9 @@ class DeviceManager(object):
     devices."""
 
     def __init__(self):
+        self.codes = {
+            'key': dict(KEYS_AND_BUTTONS)
+        }
         self.keyboards = []
         self.mice = []
         self.gamepads = []
@@ -131,13 +156,13 @@ class DeviceManager(object):
                      "not be parsed: %s" % device_path, RuntimeWarning)
                 continue
             if device_type == 'kbd':
-                self.keyboards.append(Keyboard(device_path))
+                self.keyboards.append(Keyboard(self, device_path))
             elif device_type == 'mouse':
-                self.mice.append(Mouse(device_path))
+                self.mice.append(Mouse(self, device_path))
             elif device_type == 'joystick':
-                self.gamepads.append(GamePad(device_path))
+                self.gamepads.append(GamePad(self, device_path))
             else:
-                self.other_devices.append(OtherDevice(device_path))
+                self.other_devices.append(OtherDevice(self, device_path))
 
     def __iter__(self):
         return iter(self.all_devices)
@@ -148,10 +173,12 @@ class DeviceManager(object):
         except IndexError:
             raise IndexError("list index out of range")
 
+devices = DeviceManager()
+
 
 def main():
     """Simple example."""
-    DeviceManager()
+    print("Hello")
 
 
 if __name__ == '__main__':
