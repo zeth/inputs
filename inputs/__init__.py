@@ -13,26 +13,6 @@ EV_KEY = 0x01
 # pylint: disable=too-few-public-methods
 
 
-def get_input():
-    """Get a single event from any input device."""
-    pass
-
-
-def get_key():
-    """Get a single keypress from a keyboard."""
-    pass
-
-
-def get_mouse():
-    """Get a single movement or click from a mouse."""
-    pass
-
-
-def get_gamepad():
-    """Get a single action from a gamepad."""
-    pass
-
-
 class InputEvent(object):
     """A user event."""
     def __init__(self,
@@ -86,9 +66,7 @@ class InputDevice(object):
             event = self._character_device.read(EVENT_SIZE)
             (tv_sec, tv_usec, ev_type, code, value) = struct.unpack(
                 EVENT_FORMAT, event)
-            print((tv_sec, tv_usec, ev_type, code, value))
             if ev_type == EV_KEY:
-                print(tv_sec + (tv_usec / 1000000))
                 yield InputEvent(self,
                                  tv_sec + (tv_usec / 1000000),
                                  code,
@@ -173,13 +151,36 @@ class DeviceManager(object):
         except IndexError:
             raise IndexError("list index out of range")
 
-devices = DeviceManager()
+devices = DeviceManager()  # pylint: disable=invalid-name
 
 
-def main():
-    """Simple example."""
-    print("Hello")
+def get_input():
+    """Get a single event from any input device."""
+    pass
 
 
-if __name__ == '__main__':
-    main()
+def get_key():
+    """Get a single keypress from a keyboard."""
+    try:
+        keyboard = devices.keyboards[0]
+    except IndexError:
+        raise RuntimeError("No keyboard found.")
+    return keyboard.read()
+
+
+def get_mouse():
+    """Get a single movement or click from a mouse."""
+    try:
+        mouse = devices.mice[0]
+    except IndexError:
+        raise RuntimeError("No mice found.")
+    return mouse.read()
+
+
+def get_gamepad():
+    """Get a single action from a gamepad."""
+    try:
+        gamepad = devices.gamepads[0]
+    except IndexError:
+        raise RuntimeError("No gamepad found.")
+    return gamepad.read()
