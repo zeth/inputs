@@ -18,20 +18,20 @@ DEVICE_PROPERTIES = (
     (0x1f + 1, "INPUT_PROP_CNT"))
 
 EVENT_TYPES = (
-    (0x00, "EV_SYN"),
-    (0x01, "EV_KEY"),
-    (0x02, "EV_REL"),
-    (0x03, "EV_ABS"),
-    (0x04, "EV_MSC"),
-    (0x05, "EV_SW"),
-    (0x11, "EV_LED"),
-    (0x12, "EV_SND"),
-    (0x14, "EV_REP"),
-    (0x15, "EV_FF"),
-    (0x16, "EV_PWR"),
-    (0x17, "EV_FF_STATUS"),
-    (0x1f, "EV_MAX"),
-    (0x1f+1, "EV_CNT"))
+    (0x00, "Sync"),
+    (0x01, "Key"),
+    (0x02, "Relative"),
+    (0x03, "Absolute"),
+    (0x04, "Misc"),
+    (0x05, "Switch"),
+    (0x11, "LED"),
+    (0x12, "Sound"),
+    (0x14, "Repeat"),
+    (0x15, "ForceFeedback"),
+    (0x16, "Power"),
+    (0x17, "ForceFeedbackStatus"),
+    (0x1f, "Max"),
+    (0x1f+1, "Current"))
 
 SYNCHRONIZATION_EVENTS = (
     (0, "SYN_REPORT"),
@@ -690,3 +690,28 @@ SOUNDS = (
     (0x02, "SND_TONE"),
     (0x07, "SND_MAX"),
     (0x07+1, "SND_CNT"))
+
+
+FORCE_FEEDBACK = ()
+POWER = ()
+FORCE_FEEDBACK_STATUS = ()
+MAX = ()
+CURRENT = ()
+
+
+EVENT_MAP = (
+    ('types', EVENT_TYPES),
+    ('Sync', SYNCHRONIZATION_EVENTS),
+    ('Key', KEYS_AND_BUTTONS),
+    ('Relative', RELATIVE_AXES),
+    ('Absolute', ABSOLUTE_AXES),
+    ('Misc', MISC_EVENTS),
+    ('Switch', SWITCH_EVENTS),
+    ('LED', LEDS),
+    ('Sound', SOUNDS),
+    ('Repeat', AUTOREPEAT_VALUES),
+    ('ForceFeedback', FORCE_FEEDBACK),
+    ('Power', POWER),
+    ('ForceFeedbackStatus', FORCE_FEEDBACK_STATUS),
+    ('Max', MAX),
+    ('Cuurent', CURRENT))

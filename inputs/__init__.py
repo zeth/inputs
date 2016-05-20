@@ -6,11 +6,31 @@ import glob
 import struct
 from collections import namedtuple
 from warnings import warn
-from inputs.constants import EVENT_FORMAT, EVENT_SIZE, KEYS_AND_BUTTONS
+from inputs.constants import EVENT_MAP, EVENT_FORMAT, EVENT_SIZE
 
-EV_KEY = 0x01
 
 # pylint: disable=too-few-public-methods
+
+
+class PermissionDenied(IOError):
+    """/dev/input not allowed by user.
+    Common Linux problem."""
+    pass
+
+
+class UnpluggedError(RuntimeError):
+    """The device requested is not plugged in."""
+    pass
+
+
+class UnknownEventType(IndexError):
+    """We don't know what this event is."""
+    pass
+
+
+class UnknownEventCode(IndexError):
+    """We don't know what this event is."""
+    pass
 
 
 class InputEvent(object):
@@ -58,20 +78,36 @@ class InputDevice(object):
     @property
     def _character_device(self):
         if not self._character_file:
-            self._character_file = io.open(self._character_device_path, 'rb')
+            try:
+                self._character_file = io.open(
+                    self._character_device_path, 'rb')
+            except IOError as err:
+                if err.errno == 13:
+                    raise PermissionDenied(
+                        "The user (that this program is being run as) does "
+                        "not have permission to access the input events, "
+                        "check groups and permissions, for example, on "
+                        "Debian, the user needs to be in the input group.")
+                else:
+                    raise
         return self._character_file
 
-    def __iter__(self):
+    def __iter__(self, type_filter=None):
         while True:
             event = self._character_device.read(EVENT_SIZE)
             (tv_sec, tv_usec, ev_type, code, value) = struct.unpack(
                 EVENT_FORMAT, event)
-            if ev_type == EV_KEY:
-                yield InputEvent(self,
-                                 tv_sec + (tv_usec / 1000000),
-                                 code,
-                                 value,
-                                 ev_type)
+            event_type = self.manager.get_event_type(ev_type)
+            event_string = self.manager.get_event_string(event_type, code)
+            if type_filter:
+                if event_type != type_filter:
+                    return
+
+            yield InputEvent(self,
+                             tv_sec + (tv_usec / 1000000),
+                             event_string,
+                             value,
+                             event_type)
 
     def read(self):
         """Read the next input event."""
@@ -105,9 +141,7 @@ class DeviceManager(object):
     devices."""
 
     def __init__(self):
-        self.codes = {
-            'key': dict(KEYS_AND_BUTTONS)
-        }
+        self.codes = {key: dict(value) for key, value in EVENT_MAP}
         self.keyboards = []
         self.mice = []
         self.gamepads = []
@@ -151,6 +185,21 @@ class DeviceManager(object):
         except IndexError:
             raise IndexError("list index out of range")
 
+    def get_event_type(self, raw_type):
+        """Convert the code to a useful string name."""
+        try:
+            return self.codes['types'][raw_type]
+        except KeyError:
+            raise UnknownEventType("We don't know this event type")
+
+    def get_event_string(self, evtype, code):
+        """Get the string name of the event."""
+        try:
+            return self.codes[evtype][code]
+        except KeyError:
+            raise UnknownEventCode("We don't know this event.")
+
+
 devices = DeviceManager()  # pylint: disable=invalid-name
 
 
@@ -164,7 +213,7 @@ def get_key():
     try:
         keyboard = devices.keyboards[0]
     except IndexError:
-        raise RuntimeError("No keyboard found.")
+        raise UnpluggedError("No keyboard found.")
     return keyboard.read()
 
 
@@ -173,7 +222,7 @@ def get_mouse():
     try:
         mouse = devices.mice[0]
     except IndexError:
-        raise RuntimeError("No mice found.")
+        raise UnpluggedError("No mice found.")
     return mouse.read()
 
 
@@ -182,5 +231,5 @@ def get_gamepad():
     try:
         gamepad = devices.gamepads[0]
     except IndexError:
-        raise RuntimeError("No gamepad found.")
+        raise UnpluggedError("No gamepad found.")
     return gamepad.read()
