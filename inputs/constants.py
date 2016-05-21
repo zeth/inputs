@@ -7,7 +7,7 @@ EVENT_SIZE = struct.calcsize(EVENT_FORMAT)
 
 SPECIAL_DEVICES = (
     ("Raspberry Pi Sense HAT Joystick",
-     "/dev/input/by-id/gpio-Raspberry_Pi_Sense_HAT_Joystick-event-joystick"),)
+     "/dev/input/by-id/gpio-Raspberry_Pi_Sense_HAT_Joystick-event-kbd"),)
 
 DEVICE_PROPERTIES = (
     (0x00, "INPUT_PROP_POINTER"),  # needs a pointer
