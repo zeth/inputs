@@ -51,13 +51,16 @@ class InputEvent(object):
 class InputDevice(object):
     """A user input device."""
     def __init__(self, manager, device_path,
-                 char_name_override=None):
+                 char_path_override=None):
         self.manager = manager
         self._device_path = device_path
         long_identifier = device_path.split('/')[4]
         self.protocol, remainder = long_identifier.split('-', 1)
         self._identifier, _, self.device_type = remainder.rsplit('-', 2)
-        self._character_device_path = os.path.realpath(device_path)
+        if char_path_override:
+            self._character_device_path = char_path_override
+        else:
+            self._character_device_path = os.path.realpath(device_path)
         self._character_file = None
         with open("/sys/class/input/%s/device/name" %
                   self._get_char_name()) as name_file:
@@ -159,7 +162,7 @@ class DeviceManager(object):
         self.all_devices.extend(self.gamepads)
         self.all_devices.extend(self.other_devices)
 
-    def _parse_device_path(self, device_path, char_name_override=None):
+    def _parse_device_path(self, device_path, char_path_override=None):
         """Parse each device and add to the approriate list."""
         try:
             device_type = device_path.rsplit('-', 1)[1]
@@ -170,18 +173,18 @@ class DeviceManager(object):
 
         if device_type == 'kbd':
             self.keyboards.append(Keyboard(self, device_path,
-                                           char_name_override))
+                                           char_path_override))
         elif device_type == 'mouse':
             self.mice.append(Mouse(self, device_path,
-                                   char_name_override))
+                                   char_path_override))
         elif device_type == 'joystick':
             self.gamepads.append(GamePad(self,
                                          device_path,
-                                         char_name_override))
+                                         char_path_override))
         else:
             self.other_devices.append(OtherDevice(self,
                                                   device_path,
-                                                  char_name_override))
+                                                  char_path_override))
 
     def _find_devices(self):
         """Find available devices."""
@@ -204,7 +207,8 @@ class DeviceManager(object):
                 device_name = name_file.read().strip()
                 if device_name in self.codes['specials']:
                     self._parse_device_path(
-                        devices.codes['specials'][device_name], char_name)
+                        self.codes['specials'][device_name],
+                        os.path.join('/dev/input', char_name))
 
     def __iter__(self):
         return iter(self.all_devices)
