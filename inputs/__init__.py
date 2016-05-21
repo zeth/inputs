@@ -50,7 +50,8 @@ class InputEvent(object):
 
 class InputDevice(object):
     """A user input device."""
-    def __init__(self, manager, device_path):
+    def __init__(self, manager, device_path,
+                 char_name_override=None):
         self.manager = manager
         self._device_path = device_path
         long_identifier = device_path.split('/')[4]
@@ -158,23 +159,52 @@ class DeviceManager(object):
         self.all_devices.extend(self.gamepads)
         self.all_devices.extend(self.other_devices)
 
+    def _parse_device_path(self, device_path, char_name_override=None):
+        """Parse each device and add to the approriate list."""
+        try:
+            device_type = device_path.rsplit('-', 1)[1]
+        except IndexError:
+            warn("The following device path was skipped as it could "
+                 "not be parsed: %s" % device_path, RuntimeWarning)
+            return
+
+        if device_type == 'kbd':
+            self.keyboards.append(Keyboard(self, device_path,
+                                           char_name_override))
+        elif device_type == 'mouse':
+            self.mice.append(Mouse(self, device_path,
+                                   char_name_override))
+        elif device_type == 'joystick':
+            self.gamepads.append(GamePad(self,
+                                         device_path,
+                                         char_name_override))
+        else:
+            self.other_devices.append(OtherDevice(self,
+                                                  device_path,
+                                                  char_name_override))
+
     def _find_devices(self):
         """Find available devices."""
+        # Start with everything given an id
+        # I.e. those with fully correct kernel drivers
         for device_path in glob.glob('/dev/input/by-id/*-event-*'):
-            try:
-                device_type = device_path.rsplit('-', 1)[1]
-            except IndexError:
-                warn("The following device path was skipped as it could "
-                     "not be parsed: %s" % device_path, RuntimeWarning)
+            self._parse_device_path(device_path)
+
+        # We want a list of things we already found
+        charnames = [device._get_char_name() for
+                     device in self.all_devices]
+
+        # Look for special devices
+        for eventdir in glob.glob('/sys/class/input/event*'):
+            char_name = os.path.split(eventdir)[1]
+            if char_name in charnames:
                 continue
-            if device_type == 'kbd':
-                self.keyboards.append(Keyboard(self, device_path))
-            elif device_type == 'mouse':
-                self.mice.append(Mouse(self, device_path))
-            elif device_type == 'joystick':
-                self.gamepads.append(GamePad(self, device_path))
-            else:
-                self.other_devices.append(OtherDevice(self, device_path))
+            name_file = os.path.join(eventdir, 'device', 'name')
+            with open(name_file) as name_file:
+                device_name = name_file.read().strip()
+                if device_name in self.codes['specials']:
+                    self._parse_device_path(
+                        devices.codes['specials'][device_name], char_name)
 
     def __iter__(self):
         return iter(self.all_devices)

@@ -5,6 +5,9 @@ import struct
 EVENT_FORMAT = str('llHHI')
 EVENT_SIZE = struct.calcsize(EVENT_FORMAT)
 
+SPECIAL_DEVICES = (
+    ("Raspberry Pi Sense HAT Joystick",
+     "gpio-Raspberry_Pi_Sense_HAT_Joystick-event-joystick"),)
 
 DEVICE_PROPERTIES = (
     (0x00, "INPUT_PROP_POINTER"),  # needs a pointer
@@ -708,6 +711,7 @@ CURRENT = ()
 
 EVENT_MAP = (
     ('types', EVENT_TYPES),
+    ('specials', SPECIAL_DEVICES),
     ('Sync', SYNCHRONIZATION_EVENTS),
     ('Key', KEYS_AND_BUTTONS),
     ('Relative', RELATIVE_AXES),
@@ -721,4 +725,4 @@ EVENT_MAP = (
     ('Power', POWER),
     ('ForceFeedbackStatus', FORCE_FEEDBACK_STATUS),
     ('Max', MAX),
-    ('Cuurent', CURRENT))
+    ('Current', CURRENT))
