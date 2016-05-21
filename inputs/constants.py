@@ -691,10 +691,17 @@ SOUNDS = (
     (0x07, "SND_MAX"),
     (0x07+1, "SND_CNT"))
 
+# We have yet to support force feedback but probably should
+# eventually:
 
-FORCE_FEEDBACK = ()
-POWER = ()
-FORCE_FEEDBACK_STATUS = ()
+FORCE_FEEDBACK = ()  # Motor in gamepad
+FORCE_FEEDBACK_STATUS = ()  # Status of motor
+
+POWER = ()  # Power switch
+
+# These two are internal workings of evdev we probably will never care
+# about.
+
 MAX = ()
 CURRENT = ()
 

@@ -203,11 +203,6 @@ class DeviceManager(object):
 devices = DeviceManager()  # pylint: disable=invalid-name
 
 
-def get_input():
-    """Get a single event from any input device."""
-    pass
-
-
 def get_key():
     """Get a single keypress from a keyboard."""
     try:
