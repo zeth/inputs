@@ -103,7 +103,7 @@ As you can see, it is really very simple. The device manager has an
 attribute called codes which is giant dictionary of key, button and
 other codes.
 
-Using pypi is superior but is yet another thing to learn for new
+Using PyPi is superior but is yet another thing to learn for new
 users. Therefore, inputs is kept as one file to make it easy for
 people to include in their project.
 
@@ -1132,23 +1132,22 @@ class GamePad(InputDevice):
                 self.__last_state = self.__read_device()
 
     def __iter__(self, type_filter=None):
-        if not WIN:
-            event = super(GamePad, self)._do_iter(type_filter)
-            if event:
-                yield event
+        if WIN:
+            self.__check_state()
+        event = super(GamePad, self)._do_iter(type_filter)
+        if event:
+            yield event
 
-        else:
-            while True:
-                state = self.__read_device()
-                if not state:
-                    raise UnpluggedError(
-                        "Gamepad %d is not connected" % self.__device_number)
-                if state.packet_number != self.__last_state.packet_number:
-                    # state has changed, handle the change
-                    ievent = self.__handle_changed_state(state)
-                    self.__last_state = state
-                    yield ievent
-                    self.__last_state = state
+    def __check_state(self):
+        """On Windows, check the state and fill the event character device."""
+        state = self.__read_device()
+        if not state:
+            raise UnpluggedError(
+                "Gamepad %d is not connected" % self.__device_number)
+        if state.packet_number != self.__last_state.packet_number:
+            # state has changed, handle the change
+            self.__handle_changed_state(state)
+            self.__last_state = state
 
     @staticmethod
     def __get_timeval():
@@ -1216,7 +1215,6 @@ class GamePad(InputDevice):
         print(axis_changes)
         if events:
             self.__write_to_character_device(events, timeval)
-        return "Hello Monkey"
 
     def __map_button(self, button):
         """Get the linux xpad code from the Windows xinput code."""
