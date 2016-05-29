@@ -2,12 +2,43 @@
 
 import struct
 
+# long, long, unsigned short, unsigned short, unsigned int
 EVENT_FORMAT = str('llHHI')
 EVENT_SIZE = struct.calcsize(EVENT_FORMAT)
 
 SPECIAL_DEVICES = (
     ("Raspberry Pi Sense HAT Joystick",
      "/dev/input/by-id/gpio-Raspberry_Pi_Sense_HAT_Joystick-event-kbd"),)
+
+XINPUT_MAPPING = (
+    (1, 0x11),
+    (2, 0x11),
+    (3, 0x10),
+    (4, 0x10),
+    (5, 0x13a),
+    (6, 0x13b),
+    #  (7, None),
+    #  (8, None),
+    (9, 0x136),
+    (10, 0x137),
+    #  (11, None),
+    #  (12, None),
+    (13, 0x130),
+    (14, 0x131),
+    (15, 0x134),
+    (16, 0x133)
+)
+
+XINPUT_DLL_NAMES = (
+    "XInput1_4.dll",
+    "XInput9_1_0.dll",
+    "XInput1_3.dll",
+    "XInput1_2.dll",
+    "XInput1_1.dll"
+)
+
+XINPUT_ERROR_DEVICE_NOT_CONNECTED = 1167
+XINPUT_ERROR_SUCCESS = 0
 
 DEVICE_PROPERTIES = (
     (0x00, "INPUT_PROP_POINTER"),  # needs a pointer
@@ -711,7 +742,9 @@ CURRENT = ()
 
 EVENT_MAP = (
     ('types', EVENT_TYPES),
+    ('type_codes', ((value, key) for key, value in EVENT_TYPES)),
     ('specials', SPECIAL_DEVICES),
+    ('xpad', XINPUT_MAPPING),
     ('Sync', SYNCHRONIZATION_EVENTS),
     ('Key', KEYS_AND_BUTTONS),
     ('Relative', RELATIVE_AXES),
