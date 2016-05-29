@@ -103,6 +103,10 @@ As you can see, it is really very simple. The device manager has an
 attribute called codes which is giant dictionary of key, button and
 other codes.
 
+Using pypi is superior but is yet another thing to learn for new
+users. Therefore, inputs is kept as one file to make it easy for
+people to include in their project.
+
 Gamepads
 --------
 
@@ -156,10 +160,9 @@ import struct
 import platform
 import math
 import time
-from collections import namedtuple
 from warnings import warn
 from itertools import count
-from operator import itemgetter, attrgetter
+from operator import itemgetter
 import ctypes
 
 
