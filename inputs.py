@@ -1338,13 +1338,6 @@ class GamePad(InputDevice):
         # returns for example [(1,15,1)] type, code, value?
         return changed_buttons
 
-    @staticmethod
-    def __translate_using_data_size(value, data_size):
-        """Normalizes analog data to [0,1] for unsigned data and [-0.5,0.5]
-        for signed data."""
-        data_bits = 8 * data_size
-        return float(value) / (2 ** data_bits - 1)
-
     def __detect_axis_events(self, state):
         # axis fields are everything but the buttons
         # pylint: disable=protected-access
@@ -1352,31 +1345,16 @@ class GamePad(InputDevice):
         axis_fields = dict(XinputGamepad._fields_)
         axis_fields.pop('buttons')
         changed_axes = []
+
+        # Ax_type might be useful when we support high-level deadzone
+        # methods.
+        # pylint: disable=unused-variable
         for axis, ax_type in list(axis_fields.items()):
             old_val = getattr(self.__last_state.gamepad, axis)
             new_val = getattr(state.gamepad, axis)
             if old_val != new_val:
                 changed_axes.append((axis, new_val))
         return changed_axes
-
-    def _dampen_axis(self, ax_type, axis, old_val, new_val):
-        data_size = ctypes.sizeof(ax_type)
-        old_val = self.__translate_using_data_size(old_val, data_size)
-        new_val = self.__translate_using_data_size(new_val, data_size)
-
-        # an attempt to add deadzones and dampen noise
-        # done by feel rather than following
-        # http://msdn.microsoft.com/en-gb/library/windows/
-        # desktop/ee417001%28v=vs.85%29.aspx#dead_zone
-        # ags, 2014-07-01
-        if ((old_val != new_val and (
-                new_val > 0.08000000000000000
-                or new_val < -0.08000000000000000)
-             and abs(old_val - new_val) > 0.00000000500000000)
-                or (axis == 'right_trigger' or axis == 'left_trigger')
-                and new_val == 0
-                and abs(old_val - new_val) > 0.00000000500000000):
-            return new_val
 
     def __read_device(self):
         """Read the state of the gamepad."""
