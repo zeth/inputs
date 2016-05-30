@@ -123,6 +123,13 @@ yourself.
 
 More testing and support for common gamepads will come in due course.
 
+On Linux and Raspberry Pi, the guide button (also known as home or
+mode or the fancy branded button) is exposed as BTN_MODE.
+
+On Windows, I haven't bothered to support it yet. It is not officially
+exposed to applications and using it unofficially requires every user
+to turn Game DVR off in the Windows Xbox app settings.
+
 Raspberry Pi Sense HAT
 ----------------------
 
@@ -167,7 +174,7 @@ import ctypes
 
 
 # long, long, unsigned short, unsigned short, unsigned int
-EVENT_FORMAT = str('llHHI')
+EVENT_FORMAT = str('llHHi')
 EVENT_SIZE = struct.calcsize(EVENT_FORMAT)
 
 SPECIAL_DEVICES = (
@@ -181,16 +188,21 @@ XINPUT_MAPPING = (
     (4, 0x10),
     (5, 0x13a),
     (6, 0x13b),
-    #  (7, None),
-    #  (8, None),
+    (7, 0x13d),
+    (8, 0x13e),
     (9, 0x136),
     (10, 0x137),
-    #  (11, None),
-    #  (12, None),
     (13, 0x130),
     (14, 0x131),
     (15, 0x134),
-    (16, 0x133)
+    (16, 0x133),
+    (17, 0x11),
+    ('l_thumb_x', 0x00),
+    ('l_thumb_y', 0x01),
+    ('left_trigger', 0x02),
+    ('r_thumb_x', 0x03),
+    ('r_thumb_y', 0x04),
+    ('right_trigger', 0x05),
 )
 
 XINPUT_DLL_NAMES = (
@@ -1025,28 +1037,30 @@ class InputDevice(object):
         return self._character_file
 
     def __iter__(self, type_filter=None):
-        event = self._do_iter(type_filter)
-        if event:
-            yield event
+        while True:
+            event = self._do_iter(type_filter)
+            if event:
+                yield event
 
     def _do_iter(self, type_filter=None):
-        while True:
-            event = self._character_device.read(EVENT_SIZE)
-            (tv_sec, tv_usec, ev_type, code, value) = struct.unpack(
-                EVENT_FORMAT, event)
-            event_type = self.manager.get_event_type(ev_type)
-            if type_filter:
-                if event_type != type_filter:
-                    return
+        event = self._character_device.read(EVENT_SIZE)
+        if not event:
+            return
+        (tv_sec, tv_usec, ev_type, code, value) = struct.unpack(
+            EVENT_FORMAT, event)
+        event_type = self.manager.get_event_type(ev_type)
+        if type_filter:
+            if event_type != type_filter:
+                return
 
-            eventinfo = {
-                "ev_type": event_type,
-                "state": value,
-                "timestamp": tv_sec + (tv_usec / 1000000),
-                "code": self.manager.get_event_string(event_type, code)
-            }
+        eventinfo = {
+            "ev_type": event_type,
+            "state": value,
+            "timestamp": tv_sec + (tv_usec / 1000000),
+            "code": self.manager.get_event_string(event_type, code)
+        }
 
-            return InputEvent(self, eventinfo)
+        return InputEvent(self, eventinfo)
 
     def read(self):
         """Read the next input event."""
@@ -1132,11 +1146,12 @@ class GamePad(InputDevice):
                 self.__last_state = self.__read_device()
 
     def __iter__(self, type_filter=None):
-        if WIN:
-            self.__check_state()
-        event = super(GamePad, self)._do_iter(type_filter)
-        if event:
-            yield event
+        while True:
+            if WIN:
+                self.__check_state()
+            event = self._do_iter(type_filter)
+            if event:
+                yield event
 
     def __check_state(self):
         """On Windows, check the state and fill the event character device."""
@@ -1170,7 +1185,6 @@ class GamePad(InputDevice):
             raise UnknownEventType(
                 "We don't know what kind of event a %s is.",
                 event_type)
-
         event = struct.pack(EVENT_FORMAT,
                             timeval[0],
                             timeval[1],
@@ -1211,8 +1225,7 @@ class GamePad(InputDevice):
         """
         timeval = self.__get_timeval()
         events = self.__get_button_events(state, timeval)
-        axis_changes = self.__detect_axis_events(state)
-        print(axis_changes)
+        events.extend(self.__get_axis_events(state, timeval))
         if events:
             self.__write_to_character_device(events, timeval)
 
@@ -1220,12 +1233,21 @@ class GamePad(InputDevice):
         """Get the linux xpad code from the Windows xinput code."""
         _, start_code, start_value = button
         value = start_value
+        ev_type = "Key"
         code = self.manager.codes['xpad'][start_code]
+        if 1 <= start_code <= 4:
+            ev_type = "Absolute"
+        if start_code == 1 and start_value == 1:
+            value = -1
+        elif start_code == 3 and start_value == 1:
+            value = -1
+        return code, value, ev_type
 
-        if button == 1 and start_value == 1:
-            value = 0xFFFFFFFF
-        elif button == 3 and start_value == 1:
-            value = 0xFFFFFFFF
+    def __map_axis(self, axis):
+        """Get the linux xpad code from the Windows xinput code."""
+        start_code, start_value = axis
+        value = start_value
+        code = self.manager.codes['xpad'][start_code]
         return code, value
 
     def __get_button_events(self, state, timeval=None):
@@ -1234,19 +1256,36 @@ class GamePad(InputDevice):
         events = self.__emulate_buttons(changed_buttons, timeval)
         return events
 
-    def __emulate_buttons(self, changed_buttons, timeval=None):
-        """Make the button events use the Linux style format."""
+    def __get_axis_events(self, state, timeval=None):
+        """Get the stick events from xinput."""
+        axis_changes = self.__detect_axis_events(state)
+        events = self.__emulate_axis(axis_changes, timeval)
+        return events
+
+    def __emulate_axis(self, axis_changes, timeval=None):
+        """Make the axis events use the Linux style format."""
         events = []
-        for button in changed_buttons:
-            code, value = self.__map_button(button)
+        for axis in axis_changes:
+            code, value = self.__map_axis(axis)
             event = self.__create_event_object(
-                "Key",
+                "Absolute",
                 code,
                 value,
                 timeval=timeval)
             events.append(event)
+        return events
 
-        print("events", events)
+    def __emulate_buttons(self, changed_buttons, timeval=None):
+        """Make the button events use the Linux style format."""
+        events = []
+        for button in changed_buttons:
+            code, value, ev_type = self.__map_button(button)
+            event = self.__create_event_object(
+                ev_type,
+                code,
+                value,
+                timeval=timeval)
+            events.append(event)
         return events
 
     @staticmethod
@@ -1316,24 +1355,28 @@ class GamePad(InputDevice):
         for axis, ax_type in list(axis_fields.items()):
             old_val = getattr(self.__last_state.gamepad, axis)
             new_val = getattr(state.gamepad, axis)
-            data_size = ctypes.sizeof(ax_type)
-            old_val = self.__translate_using_data_size(old_val, data_size)
-            new_val = self.__translate_using_data_size(new_val, data_size)
-
-            # an attempt to add deadzones and dampen noise
-            # done by feel rather than following
-            # http://msdn.microsoft.com/en-gb/library/windows/
-            # desktop/ee417001%28v=vs.85%29.aspx#dead_zone
-            # ags, 2014-07-01
-            if ((old_val != new_val and (
-                    new_val > 0.08000000000000000
-                    or new_val < -0.08000000000000000)
-                 and abs(old_val - new_val) > 0.00000000500000000)
-                    or (axis == 'right_trigger' or axis == 'left_trigger')
-                    and new_val == 0
-                    and abs(old_val - new_val) > 0.00000000500000000):
+            if old_val != new_val:
                 changed_axes.append((axis, new_val))
         return changed_axes
+
+    def _dampen_axis(self, ax_type, axis, old_val, new_val):
+        data_size = ctypes.sizeof(ax_type)
+        old_val = self.__translate_using_data_size(old_val, data_size)
+        new_val = self.__translate_using_data_size(new_val, data_size)
+
+        # an attempt to add deadzones and dampen noise
+        # done by feel rather than following
+        # http://msdn.microsoft.com/en-gb/library/windows/
+        # desktop/ee417001%28v=vs.85%29.aspx#dead_zone
+        # ags, 2014-07-01
+        if ((old_val != new_val and (
+                new_val > 0.08000000000000000
+                or new_val < -0.08000000000000000)
+             and abs(old_val - new_val) > 0.00000000500000000)
+                or (axis == 'right_trigger' or axis == 'left_trigger')
+                and new_val == 0
+                and abs(old_val - new_val) > 0.00000000500000000):
+            return new_val
 
     def __read_device(self):
         """Read the state of the gamepad."""
