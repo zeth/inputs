@@ -1484,16 +1484,34 @@ class DeviceManager(object):
 
     def _find_devices(self):
         """Find available devices."""
-        # Start with everything given an id
-        # I.e. those with fully correct kernel drivers
-        for device_path in glob.glob('/dev/input/by-id/*-event-*'):
+        length = self._find_by_id()
+        if not length:
+            self._find_by_path()
+        self._find_special()
+
+    def _find_by_path(self):
+        """Find devices by path."""
+        by_path = glob.glob('/dev/input/by-path/*-event-*')
+        for device_path in by_path:
             self._parse_device_path(device_path)
 
-        # We want a list of things we already found
-        charnames = [device.get_char_name() for
-                     device in self.all_devices]
+    def _find_by_id(self):
+        """Find devices by id."""
+        # Start with everything given an id
+        # I.e. those with fully correct kernel drivers
+        by_id = glob.glob('/dev/input/by-id/*-event-*')
+        for device_path in by_id:
+            self._parse_device_path(device_path)
+        return len(by_id)
 
-        # Look for special devices
+    def _get_char_names(self):
+        """Get a list of already found devices."""
+        return [device.get_char_name() for
+                device in self.all_devices]
+
+    def _find_special(self):
+        """Look for special devices."""
+        charnames = self._get_char_names()
         for eventdir in glob.glob('/sys/class/input/event*'):
             char_name = os.path.split(eventdir)[1]
             if char_name in charnames:
