@@ -1068,12 +1068,57 @@ class InputDevice(object):
 
 
 class Keyboard(InputDevice):
-    """A keyboard or other key-like device."""
+    """A keyboard or other key-like device.
+
+    Original umapped scan code, followed by the important key info
+    followed by a sync.
+
+    ('Misc', 'MSC_SCAN', 30)
+    ('Key', 'KEY_A', 1)
+    ('Sync', 'SYN_REPORT', 0)
+    """
     pass
 
 
 class Mouse(InputDevice):
-    """A mouse or other pointing-like device."""
+    """A mouse or other pointing-like device.
+
+    For a button, just the key then sync.
+
+    For example, key down:
+    ('Key', 'BTN_LEFT', 1)
+    ('Sync', 'SYN_REPORT', 0)
+
+    Another example, key up:
+    ('Key', 'BTN_LEFT', 0)
+    ('Sync', 'SYN_REPORT', 0)
+
+    For a mouse, just rel then sync.
+    ('Relative', 'REL_Y', -1)
+    ('Sync', 'SYN_REPORT', 0)
+
+    Mouse left is:
+    ('Relative', 'REL_X', -1)
+    ('Sync', 'SYN_REPORT', 0)
+
+    Mouse right is:
+    ('Relative', 'REL_X', 1)
+    ('Sync', 'SYN_REPORT', 0)
+
+    Mouse up is:
+    ('Relative', 'REL_Y', -1)
+    ('Sync', 'SYN_REPORT', 0)
+
+    Mouse down is:
+    ('Relative', 'REL_Y', 1)
+    ('Sync', 'SYN_REPORT', 0)
+
+    Button left, middle, right
+    ('Key', 'BTN_LEFT', 1)
+    ('Key', 'BTN_MIDDLE', 1)
+    ('Key', 'BTN_RIGHT', 1)
+
+    """
     pass
 
 
