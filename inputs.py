@@ -172,6 +172,13 @@ from itertools import count
 from operator import itemgetter
 import ctypes
 
+WIN = True if platform.system() == 'Windows' else False
+if WIN:
+    DWORD = ctypes.wintypes.DWORD
+    HANDLE = ctypes.wintypes.HANDLE
+else:
+    DWORD = ctypes.c_ulong
+    HANDLE = ctypes.c_void_p
 
 # long, long, unsigned short, unsigned short, int
 EVENT_FORMAT = str('llHHi')
@@ -936,8 +943,6 @@ EVENT_MAP = (
     ('Max', MAX),
     ('Current', CURRENT))
 
-WIN = True if platform.system() == 'Windows' else False
-
 
 class PermissionDenied(IOError):
     """/dev/input not allowed by user.
@@ -1448,8 +1453,8 @@ class RawInputDeviceList(ctypes.Structure):
     """
     # pylint: disable=too-few-public-methods
     _fields_ = [
-        ("hDevice", ctypes.wintypes.HANDLE),
-        ("dwType", ctypes.wintypes.DWORD)
+        ("hDevice", HANDLE),
+        ("dwType", DWORD)
     ]
 
 
