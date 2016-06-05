@@ -173,7 +173,7 @@ from operator import itemgetter
 import ctypes
 
 
-# long, long, unsigned short, unsigned short, unsigned int
+# long, long, unsigned short, unsigned short, int
 EVENT_FORMAT = str('llHHi')
 EVENT_SIZE = struct.calcsize(EVENT_FORMAT)
 
@@ -1437,9 +1437,26 @@ class OtherDevice(InputDevice):
     pass
 
 
+class RawInputDeviceList(ctypes.Structure):
+    """
+    Contains information about a raw input device.
+
+    For full details see Microsoft's documentation:
+
+    http://msdn.microsoft.com/en-us/library/windows/desktop/
+    ms645568(v=vs.85).aspx
+    """
+    # pylint: disable=too-few-public-methods
+    _fields_ = [
+        ("hDevice", ctypes.wintypes.HANDLE),
+        ("dwType", ctypes.wintypes.DWORD)
+    ]
+
+
 class DeviceManager(object):
     """Provides access to all connected and detectible user input
     devices."""
+    # pylint: disable=too-many-instance-attributes
 
     def __init__(self):
         self.codes = {key: dict(value) for key, value in EVENT_MAP}
@@ -1450,11 +1467,16 @@ class DeviceManager(object):
         self.all_devices = []
         self.xinput = None
         if WIN:
+            self._raw_device_counts = {
+                'mice': 0,
+                'keyboards': 0,
+                'otherhid': 0,
+                'unknown': 0
+            }
             self._find_devices_win()
         else:
             self._find_devices()
             self._update_all_devices()
-        #  self._index = 0
 
     def _update_all_devices(self):
         """Update the all_devices list."""
@@ -1505,6 +1527,7 @@ class DeviceManager(object):
         """Find devices on Windows."""
         self._find_xinput()
         self._detect_gamepads()
+        self._count_devices()
 
     def _detect_gamepads(self):
         """Find gamepads."""
@@ -1526,6 +1549,49 @@ class DeviceManager(object):
                 raise RuntimeError(
                     "Unknown error %d attempting to get state of device %d"
                     % (res, device_number))
+
+    def _count_devices(self):
+        """See what Windows' GetRawInputDeviceList wants to tell us.
+
+        For now, we are just seeing if there is at least one keyboard
+        and/or mouse attached.
+
+        GetRawInputDeviceList could be used to help distinguish between
+        different keyboards and mice on the system in the way Linux
+        can. However, Roma uno die non est condita.
+
+        """
+        number_of_devices = ctypes.c_uint()
+
+        if ctypes.windll.user32.GetRawInputDeviceList(
+                ctypes.POINTER(ctypes.c_int)(),
+                ctypes.byref(number_of_devices),
+                ctypes.sizeof(RawInputDeviceList)) == -1:
+            warn("Call to GetRawInputDeviceList was unsuccessful."
+                 "We have no idea if a mouse or keyboard is attached.",
+                 RuntimeWarning)
+            return
+
+        devices_found = (RawInputDeviceList * number_of_devices.value)()
+
+        if ctypes.windll.user32.GetRawInputDeviceList(
+                devices_found,
+                ctypes.byref(number_of_devices),
+                ctypes.sizeof(RawInputDeviceList)) == -1:
+            warn("Call to GetRawInputDeviceList was unsuccessful."
+                 "We have no idea if a mouse or keyboard is attached.",
+                 RuntimeWarning)
+            return
+
+        for device in devices_found:
+            if device.dwType == 0:
+                self._raw_device_counts['mice'] += 1
+            elif device.dwType == 1:
+                self._raw_device_counts['keyboards'] += 1
+            elif device.dwType == 2:
+                self._raw_device_counts['otherhid'] += 1
+            else:
+                self._raw_device_counts['unknown'] += 1
 
     def _find_devices(self):
         """Find available devices."""
