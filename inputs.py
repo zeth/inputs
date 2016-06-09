@@ -924,6 +924,216 @@ WIN_KEYBOARD_CODES = {
     0x105: 0,
 }
 
+# THING SING That thing can sing!
+# SONG LONG A long, long song.
+# Good-bye, Thing. You sing too long.
+# pylint: disable=too-many-lines
+
+WINCODES = (
+    (0x01, 0x110),  # Left mouse button
+    (0x02, 0x111),  # Right mouse button
+    (0x03, 0),  # Control-break processing
+    (0x04, 0x112),  # Middle mouse button (three-button mouse)
+    (0x05, 0x113),  # X1 mouse button
+    (0x06, 0x114),  # X2 mouse button
+    (0x07, 0),  # Undefined
+    (0x08, 14),  # BACKSPACE key
+    (0x09, 15),  # TAB key
+    (0x0A, 0),  # Reserved
+    (0x0B, 0),  # Reserved
+    (0x0C, 0x163),  # CLEAR key
+    (0x0D, 28),  # ENTER key
+    (0x0E, 0),  # Undefined
+    (0x0F, 0),  # Undefined
+    (0x10, 42),  # SHIFT key
+    (0x11, 29),  # CTRL key
+    (0x12, 56),  # ALT key
+    (0x13, 119),  # PAUSE key
+    (0x14, 58),  # CAPS LOCK key
+    (0x15, 90),  # IME Kana mode
+    (0x15, 91),  # IME Hanguel mode (maintained for compatibility; use
+                 # VK_HANGUL)
+    (0x15, 91),  # IME Hangul mode
+    (0x16, 0),  # Undefined
+    (0x17, 92),  # IME Junja mode - These all need to be fixed
+    (0x18, 93),  # IME final mode - By someone who
+    (0x19, 94),  # IME Hanja mode - Knows how
+    (0x19, 95),  # IME Kanji mode - Japanese Keyboards work
+    (0x1A, 0),  # Undefined
+    (0x1B, 1),  # ESC key
+    (0x1C, 0),  # IME convert
+    (0x1D, 0),  # IME nonconvert
+    (0x1E, 0),  # IME accept
+    (0x1F, 0),  # IME mode change request
+    (0x20, 57),  # SPACEBAR
+    (0x21, 104),  # PAGE UP key
+    (0x22, 109),  # PAGE DOWN key
+    (0x23, 107),  # END key
+    (0x24, 102),  # HOME key
+    (0x25, 105),  # LEFT ARROW key
+    (0x26, 103),  # UP ARROW key
+    (0x27, 106),  # RIGHT ARROW key
+    (0x28, 108),  # DOWN ARROW key
+    (0x29, 0x161),  # SELECT key
+    (0x2A, 210),  # PRINT key
+    (0x2B, 28),  # EXECUTE key
+    (0x2C, 99),  # PRINT SCREEN key
+    (0x2D, 110),  # INS key
+    (0x2E, 111),  # DEL key
+    (0x2F, 138),  # HELP key
+    (0x30, 11),  # 0 key
+    (0x31, 2),  # 1 key
+    (0x32, 3),  # 2 key
+    (0x33, 4),  # 3 key
+    (0x34, 5),  # 4 key
+    (0x35, 6),  # 5 key
+    (0x36, 7),  # 6 key
+    (0x37, 8),  # 7 key
+    (0x38, 9),  # 8 key
+    (0x39, 10),  # 9 key
+    #  (0x3A-40, 0),  # Undefined
+    (0x41, 30),  # A key
+    (0x42, 48),  # B key
+    (0x43, 46),  # C key
+    (0x44, 32),  # D key
+    (0x45, 18),  # E key
+    (0x46, 33),  # F key
+    (0x47, 34),  # G key
+    (0x48, 35),  # H key
+    (0x49, 23),  # I key
+    (0x4A, 36),  # J key
+    (0x4B, 37),  # K key
+    (0x4C, 38),  # L key
+    (0x4D, 50),  # M key
+    (0x4E, 49),  # N key
+    (0x4F, 24),  # O key
+    (0x50, 25),  # P key
+    (0x51, 16),  # Q key
+    (0x52, 19),  # R key
+    (0x53, 31),  # S key
+    (0x54, 20),  # T key
+    (0x55, 22),  # U key
+    (0x56, 47),  # V key
+    (0x57, 17),  # W key
+    (0x58, 45),  # X key
+    (0x59, 21),  # Y key
+    (0x5A, 44),  # Z key
+    (0x5B, 125),  # Left Windows key (Natural keyboard)
+    (0x5C, 126),  # Right Windows key (Natural keyboard)
+    (0x5D, 139),  # Applications key (Natural keyboard)
+    (0x5E, 0),  # Reserved
+    (0x5F, 142),  # Computer Sleep key
+    (0x60, 82),  # Numeric keypad 0 key
+    (0x61, 79),  # Numeric keypad 1 key
+    (0x62, 80),  # Numeric keypad 2 key
+    (0x63, 81),  # Numeric keypad 3 key
+    (0x64, 75),  # Numeric keypad 4 key
+    (0x65, 76),  # Numeric keypad 5 key
+    (0x66, 77),  # Numeric keypad 6 key
+    (0x67, 71),  # Numeric keypad 7 key
+    (0x68, 72),  # Numeric keypad 8 key
+    (0x69, 73),  # Numeric keypad 9 key
+    (0x6A, 55),  # Multiply key
+    (0x6B, 78),  # Add key
+    (0x6C, 96),  # Separator key
+    (0x6D, 74),  # Subtract key
+    (0x6E, 83),  # Decimal key
+    (0x6F, 98),  # Divide key
+    (0x70, 59),  # F1 key
+    (0x71, 60),  # F2 key
+    (0x72, 61),  # F3 key
+    (0x73, 62),  # F4 key
+    (0x74, 63),  # F5 key
+    (0x75, 64),  # F6 key
+    (0x76, 65),  # F7 key
+    (0x77, 66),  # F8 key
+    (0x78, 67),  # F9 key
+    (0x79, 68),  # F10 key
+    (0x7A, 87),  # F11 key
+    (0x7B, 88),  # F12 key
+    (0x7C, 183),  # F13 key
+    (0x7D, 184),  # F14 key
+    (0x7E, 185),  # F15 key
+    (0x7F, 186),  # F16 key
+    (0x80, 187),  # F17 key
+    (0x81, 188),  # F18 key
+    (0x82, 189),  # F19 key
+    (0x83, 190),  # F20 key
+    (0x84, 191),  # F21 key
+    (0x85, 192),  # F22 key
+    (0x86, 192),  # F23 key
+    (0x87, 194),  # F24 key
+    #  (0x88-8F, 0),  # Unassigned
+    (0x90, 69),  # NUM LOCK key
+    (0x91, 70),  # SCROLL LOCK key
+    #  (0x92-96, 0),  # OEM specific
+    #  (0x97-9F, 0),  # Unassigned
+    (0xA0, 42),  # Left SHIFT key
+    (0xA1, 54),  # Right SHIFT key
+    (0xA2, 29),  # Left CONTROL key
+    (0xA3, 97),  # Right CONTROL key
+    (0xA4, 125),  # Left MENU key
+    (0xA5, 126),  # Right MENU key
+    (0xA6, 158),  # Browser Back key
+    (0xA7, 159),  # Browser Forward key
+    (0xA8, 173),  # Browser Refresh key
+    (0xA9, 128),  # Browser Stop key
+    (0xAA, 217),  # Browser Search key
+    (0xAB, 0x16c),  # Browser Favorites key
+    (0xAC, 150),  # Browser Start and Home key
+    (0xAD, 113),  # Volume Mute key
+    (0xAE, 114),  # Volume Down key
+    (0xAF, 115),  # Volume Up key
+    (0xB0, 163),  # Next Track key
+    (0xB1, 165),  # Previous Track key
+    (0xB2, 166),  # Stop Media key
+    (0xB3, 164),  # Play/Pause Media key
+    (0xB4, 155),  # Start Mail key
+    (0xB5, 0x161),  # Select Media key
+    (0xB6, 148),  # Start Application 1 key
+    (0xB7, 149),  # Start Application 2 key
+    #  (0xB8-B9, 0),  # Reserved
+    (0xBA, 39),  # Used for miscellaneous characters; it can vary by keyboard.
+    (0xBB, 13),  # For any country/region, the '+' key
+    (0xBC, 51),  # For any country/region, the ',' key
+    (0xBD, 12),  # For any country/region, the '-' key
+    (0xBE, 52),  # For any country/region, the '.' key
+    (0xBF, 53),  # Slash
+    (0xC0, 40),  # Apostrophe
+    #  (0xC1-D7, 0),  # Reserved
+    #  (0xD8-DA, 0),  # Unassigned
+    (0xDB, 26),  # [
+    (0xDC, 86),  # \
+    (0xDD, 27),  # ]
+    (0xDE, 43),  # '
+    (0xDF, 119),  # VK_OFF - What's that?
+    (0xE0, 0),  # Reserved
+    (0xE1, 0),  # OEM Specific
+    (0xE2, 43),  # Either the angle bracket key or the backslash key
+                 # on the RT 102-key keyboard (0xE3-E4, 0), # OEM
+                 # specific
+    (0xE5, 0),  # IME PROCESS key
+    (0xE6, 0),  # OEM specific
+    (0xE7, 0),  # Used to pass Unicode characters as if they were
+                # keystrokes. The VK_PACKET key is the low word of a
+                # 32-bit Virtual Key value used for non-keyboard input
+                # methods. For more information, see Remark in
+                # KEYBDINPUT, SendInput, WM_KEYDOWN, and WM_KEYUP
+    (0xE8, 0),  # Unassigned
+    #  (0xE9-F5, 0),  # OEM specific
+    (0xF6, 0),  # Attn key
+    (0xF7, 0),  # CrSel key
+    (0xF8, 0),  # ExSel key
+    (0xF9, 222),  # Erase EOF key
+    (0xFA, 207),  # Play key
+    (0xFB, 0x174),  # Zoom key
+    (0xFC, 0),  # Reserved
+    (0xFD, 0x19b),  # PA1 key
+    (0xFE, 0x163),   # Clear key
+    (0xFF, 185)
+)
+
+
 # We have yet to support force feedback but probably should
 # eventually:
 
@@ -942,6 +1152,7 @@ CURRENT = ()
 EVENT_MAP = (
     ('types', EVENT_TYPES),
     ('type_codes', ((value, key) for key, value in EVENT_TYPES)),
+    ('wincodes', WINCODES),
     ('specials', SPECIAL_DEVICES),
     ('xpad', XINPUT_MAPPING),
     ('Sync', SYNCHRONIZATION_EVENTS),
@@ -992,11 +1203,6 @@ class InputEvent(object):
         self.code = event_info["code"]
         self.state = event_info["state"]
         self.ev_type = event_info["ev_type"]
-
-# THING SING That thing can sing!
-# SONG LONG A long, long song.
-# Good-bye, Thing. You sing too long.
-# pylint: disable=too-many-lines
 
 
 class KeyBoardEvdev(object):
@@ -1874,6 +2080,13 @@ class DeviceManager(object):
 
     def get_event_string(self, evtype, code):
         """Get the string name of the event."""
+        if WIN and evtype == 'Key':
+            # If we can map the code to a common one then do it
+            try:
+                print(code, self.codes['wincodes'][code])
+                code = self.codes['wincodes'][code]
+            except KeyError:
+                pass
         try:
             return self.codes[evtype][code]
         except KeyError:
