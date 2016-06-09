@@ -171,14 +171,23 @@ from warnings import warn
 from itertools import count
 from operator import itemgetter
 import ctypes
+from multiprocessing import Process, Pipe
+import sys
 
 WIN = True if platform.system() == 'Windows' else False
 if WIN:
     DWORD = ctypes.wintypes.DWORD
     HANDLE = ctypes.wintypes.HANDLE
+    WPARAM = ctypes.wintypes.WPARAM
+    LPARAM = ctypes.wintypes.WPARAM
+    MSG = ctypes.wintypes.MSG
 else:
     DWORD = ctypes.c_ulong
     HANDLE = ctypes.c_void_p
+    WPARAM = ctypes.c_ulonglong
+    LPARAM = ctypes.c_ulonglong
+    MSG = ctypes.Structure
+
 
 # long, long, unsigned short, unsigned short, int
 EVENT_FORMAT = str('llHHi')
@@ -908,6 +917,13 @@ SOUNDS = (
     (0x07, "SND_MAX"),
     (0x07+1, "SND_CNT"))
 
+WIN_KEYBOARD_CODES = {
+    0x0100: 1,
+    0x0101: 0,
+    0x104: 1,
+    0x105: 0,
+}
+
 # We have yet to support force feedback but probably should
 # eventually:
 
@@ -983,10 +999,151 @@ class InputEvent(object):
 # pylint: disable=too-many-lines
 
 
+class KeyBoardEvdev(object):
+    """Loosely emulate Evdev keyboard behaviour on Windows.  Listen (hook
+    in Windows terminology) for key events then buffer them in a pipe.
+    """
+    def __init__(self, pipe, debug=False):
+        self.pipe = pipe
+        self.debug = debug
+        self.hooked = None
+        self.pointer = None
+        if self.install_handle_key_input():
+            if debug:
+                print(
+                    "Installed keyboard detection, type to see the key codes. "
+                    "Press ESC to quit")
+
+        self.type_codes = {
+            "Sync": 0x00,
+            "Key": 0x01,
+            "Misc": 0x04
+        }
+
+    @staticmethod
+    def listen():
+        """Listen for keyboard input."""
+        msg = MSG()
+        ctypes.windll.user32.GetMessageA(ctypes.byref(msg), 0, 0, 0)
+
+    def get_fptr(self):
+        """Get the function pointer."""
+        cmpfunc = ctypes.CFUNCTYPE(ctypes.c_int,
+                                   WPARAM,
+                                   LPARAM,
+                                   ctypes.POINTER(KBDLLHookStruct))
+        return cmpfunc(self.handle_key_input)
+
+    def install_handle_key_input(self):
+        """Install the hook."""
+        self.pointer = self.get_fptr()
+
+        self.hooked = ctypes.windll.user32.SetWindowsHookExA(
+            13,
+            self.pointer,
+            ctypes.windll.kernel32.GetModuleHandleW(None),
+            0
+        )
+        if not self.hooked:
+            return False
+        return True
+
+    def __del__(self):
+        """Clean up when deleted."""
+        self.uninstall_handle_key_input()
+
+    def uninstall_handle_key_input(self):
+        """Remove the hook."""
+        if self.hooked is None:
+            return
+        ctypes.windll.user32.UnhookWindowsHookEx(self.hooked)
+        self.hooked = None
+
+    def handle_key_input(self, ncode, wparam, lparam):
+        """Process the key input."""
+        value = WIN_KEYBOARD_CODES[wparam]
+        scan_code = lparam.contents.scan_code
+        vk_code = lparam.contents.vk_code
+        if self.debug and vk_code == 27:
+            self.uninstall_handle_key_input()
+            sys.exit(0)
+        self.emulate_key(vk_code, scan_code, value)
+
+        return ctypes.windll.user32.CallNextHookEx(
+            self.hooked, ncode, wparam, lparam)
+
+    @staticmethod
+    def __get_timeval():
+        """Get the time and make it into C style timeval."""
+        frac, whole = math.modf(time.time())
+        microseconds = math.floor(frac * 1000000)
+        seconds = math.floor(whole)
+        return seconds, microseconds
+
+    def emulate_key(self, vk_code, scan_code, value):
+        """Emulate a single keypress."""
+        timeval = self.__get_timeval()
+        self.__write_to_pipe([
+            # Raw Scan Code first
+            self.__create_event_object(
+                "Misc",
+                0x04,
+                scan_code,
+                timeval),
+            # The main key event
+            self.__create_event_object(
+                "Key",
+                vk_code,
+                value,
+                timeval),
+            # End with a sync marker
+            self.__create_event_object(
+                "Sync",
+                0,
+                0,
+                timeval)
+        ])
+
+    def __create_event_object(self,
+                              event_type,
+                              code,
+                              value,
+                              timeval=None):
+        """Create an evdev style structure."""
+        if not timeval:
+            timeval = self.__get_timeval()
+        try:
+            event_code = self.type_codes[event_type]
+        except KeyError:
+            raise UnknownEventType(
+                "We don't know what kind of event a %s is.",
+                event_type)
+        event = struct.pack(EVENT_FORMAT,
+                            timeval[0],
+                            timeval[1],
+                            event_code,
+                            code,
+                            value)
+        return event
+
+    def __write_to_pipe(self, event_list):
+        """Send event back to the keyboard object."""
+        self.pipe.send_bytes(b''.join(event_list))
+
+
+def keyboard_process(pipe):
+    """Single subprocess for reading keyboard events on Windows."""
+    keyboard = KeyBoardEvdev(pipe)
+    keyboard.listen()
+
+
 class InputDevice(object):
     """A user input device."""
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, manager, device_path,
-                 char_path_override=None):
+                 char_path_override=None,
+                 read_size=1):
+        self.read_size = read_size
         self.manager = manager
         self._device_path = device_path
         self.protocol, _, self.device_type = self._get_path_infomation()
@@ -1008,7 +1165,6 @@ class InputDevice(object):
         return (protocol, identifier, device_type)
 
     def get_char_name(self):
-
         """Get short version of char device name."""
         return self._character_device_path.split('/')[-1]
 
@@ -1041,23 +1197,28 @@ class InputDevice(object):
                     raise
         return self._character_file
 
-    def __iter__(self, type_filter=None):
+    def __iter__(self):
         while True:
-            event = self._do_iter(type_filter)
+            event = self._do_iter()
             if event:
                 yield event
 
-    def _do_iter(self, type_filter=None):
-        event = self._character_device.read(EVENT_SIZE)
-        if not event:
-            return
-        (tv_sec, tv_usec, ev_type, code, value) = struct.unpack(
-            EVENT_FORMAT, event)
-        event_type = self.manager.get_event_type(ev_type)
-        if type_filter:
-            if event_type != type_filter:
-                return
+    def _do_iter(self):
+        if self.read_size:
+            read_size = EVENT_SIZE * self.read_size
+        else:
+            read_size = EVENT_SIZE
 
+        data = self._character_device.read(read_size)
+        if not data:
+            return
+        evdev_objects = struct.iter_unpack(EVENT_FORMAT, data)
+        events = [self._make_event(*event) for event in evdev_objects]
+        return events
+
+    # pylint: disable=too-many-arguments
+    def _make_event(self, tv_sec, tv_usec, ev_type, code, value):
+        event_type = self.manager.get_event_type(ev_type)
         eventinfo = {
             "ev_type": event_type,
             "state": value,
@@ -1072,6 +1233,21 @@ class InputDevice(object):
         return next(iter(self))
 
 
+class KBDLLHookStruct(ctypes.Structure):
+    """Contains information about a low-level keyboard input event.
+
+    For full details see Microsoft's documentation:
+
+    https://msdn.microsoft.com/en-us/library/windows/desktop/
+    ms644967%28v=vs.85%29.aspx
+    """
+    # pylint: disable=too-few-public-methods
+    _fields_ = [("vk_code", DWORD),
+                ("scan_code", DWORD),
+                ("flags", DWORD),
+                ("time", ctypes.c_int)]
+
+
 class Keyboard(InputDevice):
     """A keyboard or other key-like device.
 
@@ -1082,7 +1258,38 @@ class Keyboard(InputDevice):
     ('Key', 'KEY_A', 1)
     ('Sync', 'SYN_REPORT', 0)
     """
-    pass
+    def __init__(self, manager, device_path,
+                 char_path_override=None):
+        super(Keyboard, self).__init__(manager,
+                                       device_path,
+                                       char_path_override)
+        if WIN:
+            self.__pipe = None
+            self._listener = None
+
+    @property
+    def _pipe(self):
+        if not self.__pipe:
+            self.__pipe, child_conn = Pipe(duplex=False)
+            self._listener = Process(target=keyboard_process,
+                                     args=(child_conn,))
+            self._listener.start()
+        return self.__pipe
+
+    def __del__(self):
+        if WIN and self.__pipe:
+            self._listener.terminate()
+
+    def read(self):
+        """Read one event from the keyboard."""
+        if WIN:
+            # Should be more integrated with iter, like Linux
+            data = self._pipe.recv_bytes()
+            evdev_objects = struct.iter_unpack(EVENT_FORMAT, data)
+            events = [self._make_event(*event) for event in evdev_objects]
+            return events
+        else:
+            return super(Keyboard, self).read()
 
 
 class Mouse(InputDevice):
@@ -1195,11 +1402,11 @@ class GamePad(InputDevice):
                 self.__missed_packets = 0
                 self.__last_state = self.__read_device()
 
-    def __iter__(self, type_filter=None):
+    def __iter__(self):
         while True:
             if WIN:
                 self.__check_state()
-            event = self._do_iter(type_filter)
+            event = self._do_iter()
             if event:
                 yield event
 
@@ -1533,6 +1740,16 @@ class DeviceManager(object):
         self._find_xinput()
         self._detect_gamepads()
         self._count_devices()
+        char_path_override = None
+        if self._raw_device_counts['keyboards'] > 0:
+            self.keyboards.append(Keyboard(
+                self,
+                "/dev/input/by-id/usb-A_Windows_Keyboard-event-kbd",
+                char_path_override))
+
+        #  if self._raw_device_counts['mice'] > 1:
+        #      self.mice.append(Mouse(self, device_path,
+        #                             char_path_override))
 
     def _detect_gamepads(self):
         """Find gamepads."""
