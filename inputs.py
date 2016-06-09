@@ -1203,13 +1203,16 @@ class InputDevice(object):
             if event:
                 yield event
 
+    def _get_data(self, read_size):
+        """Get data from the character device."""
+        return self._character_device.read(read_size)
+
     def _do_iter(self):
         if self.read_size:
             read_size = EVENT_SIZE * self.read_size
         else:
             read_size = EVENT_SIZE
-
-        data = self._character_device.read(read_size)
+        data = self._get_data(read_size)
         if not data:
             return
         evdev_objects = struct.iter_unpack(EVENT_FORMAT, data)
@@ -1277,19 +1280,15 @@ class Keyboard(InputDevice):
         return self.__pipe
 
     def __del__(self):
-        if WIN and self.__pipe:
-            self._listener.terminate()
+        if 'WIN' in globals():
+            if WIN and self.__pipe:
+                self._listener.terminate()
 
-    def read(self):
-        """Read one event from the keyboard."""
-        if WIN:
-            # Should be more integrated with iter, like Linux
-            data = self._pipe.recv_bytes()
-            evdev_objects = struct.iter_unpack(EVENT_FORMAT, data)
-            events = [self._make_event(*event) for event in evdev_objects]
-            return events
-        else:
-            return super(Keyboard, self).read()
+    def _get_data(self, read_size):
+        """Get data from the character device."""
+        if not WIN:
+            return super(Keyboard, self)._get_data(read_size)
+        return self._pipe.recv_bytes()
 
 
 class Mouse(InputDevice):
