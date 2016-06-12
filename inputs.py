@@ -1446,6 +1446,273 @@ def keyboard_process(pipe):
     keyboard.listen()
 
 
+class MouseEvdev(object):
+    """Loosely emulate Evdev mouse behaviour on Windows.  Listen (hook
+    in Windows terminology) for key events then buffer them in a pipe.
+    """
+    def __init__(self, pipe, debug=False):
+        self.pipe = pipe
+        self.debug = debug
+        self.hooked = None
+        self.pointer = None
+        self.mouse_codes = WIN_MOUSE_CODES
+        if self.install_handle_key_input():
+            if debug:
+                print(
+                    "Installed mouse detection, type to see the key codes. "
+                    "Press ESC to quit")
+
+        self.type_codes = {
+            "Sync": 0x00,
+            "Key": 0x01,
+            "Relative": 0x02,
+            "Absolute": 0x03,
+            "Misc": 0x04
+        }
+
+    @staticmethod
+    def listen():
+        """Listen for mouse input."""
+        msg = MSG()
+        ctypes.windll.user32.GetMessageA(ctypes.byref(msg), 0, 0, 0)
+
+    def get_fptr(self):
+        """Get the function pointer."""
+        cmpfunc = ctypes.CFUNCTYPE(ctypes.c_int,
+                                   WPARAM,
+                                   LPARAM,
+                                   ctypes.POINTER(MSLLHookStruct))
+        return cmpfunc(self.handle_key_input)
+
+    def install_handle_key_input(self):
+        """Install the hook."""
+        self.pointer = self.get_fptr()
+
+        self.hooked = ctypes.windll.user32.SetWindowsHookExA(
+            14,
+            self.pointer,
+            ctypes.windll.kernel32.GetModuleHandleW(None),
+            0
+        )
+        if not self.hooked:
+            return False
+        return True
+
+    def __del__(self):
+        """Clean up when deleted."""
+        self.uninstall_handle_key_input()
+
+    def uninstall_handle_key_input(self):
+        """Remove the hook."""
+        if self.hooked is None:
+            return
+        ctypes.windll.user32.UnhookWindowsHookEx(self.hooked)
+        self.hooked = None
+
+    def handle_key_input(self, ncode, wparam, lparam):
+        """Process the key input."""
+        x_pos = lparam.contents.x_pos
+        y_pos = lparam.contents.y_pos
+        data = lparam.contents.mousedata
+
+        # This is how we can distinguish mouse 1 from mouse 2
+        # extrainfo = lparam.contents.extrainfo
+        # The way windows seems to do it is there is primary mouse
+        # and all other mouses report as mouse 2
+
+        # Also useful later will be to support the flags field
+        # flags = lparam.contents.flags
+        # This shows if the event was from a real device or whether it
+        # was injected somehow via software
+
+        self.emulate_mouse(wparam, x_pos, y_pos, data)
+
+        # Give back control to Windows to wait for and process the
+        # next event
+        return ctypes.windll.user32.CallNextHookEx(
+            self.hooked, ncode, wparam, lparam)
+
+    @staticmethod
+    def __get_timeval():
+        """Get the time and make it into C style timeval."""
+        frac, whole = math.modf(time.time())
+        microseconds = math.floor(frac * 1000000)
+        seconds = math.floor(whole)
+        return seconds, microseconds
+
+    def emulate_mouse(self, key_code, x_val, y_val, data):
+        """Emulate the ev codes using the data Windows has given us.
+
+        Note that by default in Windows, to recognise a double click,
+        you just notice two clicks in a row within a reasonablely
+        short time period.
+
+        However, if the application developer sets the application
+        window's class style to CS_DBLCLKS, the operating system will
+        notice the four button events (down, up, down, up), intercept
+        them and then send a single key code instead.
+
+        There are no such special double click codes on other
+        platforms, so not obvious what to do with them. It might be
+        best to just convert them back to four events.
+
+        Currently we do nothing.
+
+        ((0x0203, 'WM_LBUTTONDBLCLK'),
+         (0x0206, 'WM_RBUTTONDBLCLK'),
+         (0x0209, 'WM_MBUTTONDBLCLK'),
+         (0x020D, 'WM_XBUTTONDBLCLK'))
+
+        """
+        # Once again ignore Windows' relative time (since system
+        # startup) and use the absolute time (since epoch i.e. 1st Jan
+        # 1970).
+        timeval = self.__get_timeval()
+
+        events = []
+
+        if key_code == 0x0200:
+            # We have a mouse move alone.
+            # So just pass through to below
+            pass
+        elif key_code == 0x020A:
+            # We have a vertical mouse wheel turn
+            events.append(self.emulate_wheel(data, timeval))
+        elif key_code == 0x020E:
+            # We have a horizontal mouse wheel turn
+            # https://msdn.microsoft.com/en-us/library/windows/desktop/
+            # ms645614%28v=vs.85%29.aspx
+            events.append(self.emulate_wheel(data, timeval, horizontal=True))
+        else:
+            # We have a button press.
+            scan_event, key_event = self.emulate_press(key_code, data, timeval)
+            events.append(scan_event)
+            events.append(key_event)
+
+        # Add in the absolute position of the mouse cursor
+        x_event, y_event = self.emulate_abs(x_val, y_val, timeval)
+        events.append(x_event)
+        events.append(y_event)
+
+        # End with a sync marker
+        events.append(
+            self.__create_event_object(
+                "Sync",
+                0,
+                0,
+                timeval))
+
+        # We are done
+        self.__write_to_pipe(events)
+
+    def emulate_press(self, key_code, data, timeval):
+        """Emulate a button press.
+
+        Currently supports 5 buttons.
+
+        The Microsoft documentation does not define what happens with
+        a mouse with more than five buttons, and I don't have such a
+        mouse.
+
+        From reading the Linux sources, I guess evdev can support up
+        to 255 buttons.
+
+        Therefore, I guess we could support more buttons quite easily,
+        if we had any useful hardware.
+        """
+        # Distinguish the second extra button
+        if key_code == 0x020B and data == 2:
+            key_code = 0x020B2
+        elif key_code == 0x020C and data == 2:
+            key_code = 0x020C2
+        code, value, scan_code = self.mouse_codes[key_code]
+
+        scan_event = self.__create_event_object(
+            "Misc",
+            0x04,
+            scan_code,
+            timeval)
+        key_event = self.__create_event_object(
+            "Key",
+            code,
+            value,
+            timeval)
+        return scan_event, key_event
+
+    def emulate_wheel(self, data, timeval, horizontal=False):
+        """Emulate rel values for the mouse wheel.
+
+        In evdev, a single click forwards of the mouse wheel is 1 and
+        a click back is -1. Windows uses 120 and -120. We floor divide
+        the Windows number by 120. This is fine for the digital scroll
+        wheels found on the vast majority of mice. It also works on
+        the analogue ball on the top of the Apple mouse.
+
+        What do the analogue scroll wheels found on £200 high end
+        gaming mice do? If the lowest unit is 120 then we are okay. If
+        they report changes of less than 120 units Windows, then this
+        might be an unacceptable loss of precision. Needless to say, I
+        don't have such a mouse to test one way or the other.
+
+        """
+        if horizontal:
+            code = 0x06
+        else:
+            code = 0x08
+
+        return self.__create_event_object(
+            "Relative",
+            code,
+            data // 120,
+            timeval)
+
+    def emulate_abs(self, x_val, y_val, timeval):
+        """Emulate the absolute co-ordinates of the mouse cursor."""
+        x_event = self.__create_event_object(
+            "Absolute",
+            0x00,
+            x_val,
+            timeval)
+        y_event = self.__create_event_object(
+            "Absolute",
+            0x01,
+            y_val,
+            timeval)
+        return x_event, y_event
+
+    def __create_event_object(self,
+                              event_type,
+                              code,
+                              value,
+                              timeval=None):
+        """Create an evdev style structure."""
+        if not timeval:
+            timeval = self.__get_timeval()
+        try:
+            event_code = self.type_codes[event_type]
+        except KeyError:
+            raise UnknownEventType(
+                "We don't know what kind of event a %s is.",
+                event_type)
+        event = struct.pack(EVENT_FORMAT,
+                            timeval[0],
+                            timeval[1],
+                            event_code,
+                            code,
+                            value)
+        return event
+
+    def __write_to_pipe(self, event_list):
+        """Send event back to the mouse object."""
+        self.pipe.send_bytes(b''.join(event_list))
+
+
+def mouse_process(pipe):
+    """Single subprocess for reading mouse events on Windows."""
+    mouse = MouseEvdev(pipe)
+    mouse.listen()
+
+
 class InputDevice(object):
     """A user input device."""
     # pylint: disable=too-many-instance-attributes
@@ -1461,7 +1728,11 @@ class InputDevice(object):
         else:
             self._character_device_path = os.path.realpath(device_path)
         self._character_file = None
-        if not WIN:
+
+        if WIN:
+            self.__pipe = None
+            self._listener = None
+        else:
             with open("/sys/class/input/%s/device/name" %
                       self.get_char_name()) as name_file:
                 self.name = name_file.read().strip()
@@ -1516,6 +1787,12 @@ class InputDevice(object):
         """Get data from the character device."""
         return self._character_device.read(read_size)
 
+    @staticmethod
+    def _get_target_function():
+        """Get the correct target function. This is only used by Windows
+        subclasses."""
+        return False
+
     def _do_iter(self):
         if self.read_size:
             read_size = EVENT_SIZE * self.read_size
@@ -1544,6 +1821,29 @@ class InputDevice(object):
         """Read the next input event."""
         return next(iter(self))
 
+    @property
+    def _pipe(self):
+        """On Windows we use a pipe to emulate a Linux style character
+        buffer."""
+        if not WIN:
+            return None
+
+        if not self.__pipe:
+            target_function = self._get_target_function()
+            if not target_function:
+                return None
+
+            self.__pipe, child_conn = Pipe(duplex=False)
+            self._listener = Process(target=target_function,
+                                     args=(child_conn,))
+            self._listener.start()
+        return self.__pipe
+
+    def __del__(self):
+        if 'WIN' in globals():
+            if WIN and self.__pipe:
+                self._listener.terminate()
+
 
 class Keyboard(InputDevice):
     """A keyboard or other key-like device.
@@ -1555,28 +1855,10 @@ class Keyboard(InputDevice):
     ('Key', 'KEY_A', 1)
     ('Sync', 'SYN_REPORT', 0)
     """
-    def __init__(self, manager, device_path,
-                 char_path_override=None):
-        super(Keyboard, self).__init__(manager,
-                                       device_path,
-                                       char_path_override)
-        if WIN:
-            self.__pipe = None
-            self._listener = None
-
-    @property
-    def _pipe(self):
-        if not self.__pipe:
-            self.__pipe, child_conn = Pipe(duplex=False)
-            self._listener = Process(target=keyboard_process,
-                                     args=(child_conn,))
-            self._listener.start()
-        return self.__pipe
-
-    def __del__(self):
-        if 'WIN' in globals():
-            if WIN and self.__pipe:
-                self._listener.terminate()
+    @staticmethod
+    def _get_target_function():
+        """Get the correct target function."""
+        return keyboard_process
 
     def _get_data(self, read_size):
         """Get data from the character device."""
@@ -1624,7 +1906,22 @@ class Mouse(InputDevice):
     ('Key', 'BTN_RIGHT', 1)
 
     """
-    pass
+
+    @staticmethod
+    def _get_target_function():
+        """Get the correct target function."""
+        return mouse_process
+
+    def _get_data(self, read_size):
+        """Get data from the character device."""
+        if not WIN:
+            return super(Mouse, self)._get_data(read_size)
+        return self._pipe.recv_bytes()
+
+
+# I made GamePad this before Mouse and Keyboard above, and have
+# learned a lot about Windows in the process.  This can probably be
+# simplified massively and made to match Mouse and Keyboard more.
 
 
 class GamePad(InputDevice):
@@ -1929,7 +2226,7 @@ class DeviceManager(object):
             self._find_devices_win()
         else:
             self._find_devices()
-            self._update_all_devices()
+        self._update_all_devices()
 
     def _update_all_devices(self):
         """Update the all_devices list."""
@@ -1986,8 +2283,7 @@ class DeviceManager(object):
                 self,
                 "/dev/input/by-id/usb-A_Nice_Keyboard-event-kbd"))
 
-        if self._raw_device_counts['mice'] > 1:
-            print("Hello Mice", self._raw_device_counts['mice'])
+        if self._raw_device_counts['mice'] > 0:
             self.mice.append(Mouse(
                 self,
                 "/dev/input/by-id/usb-A_Nice_Mouse_called_Arthur-event-mouse"))
