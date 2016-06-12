@@ -159,6 +159,7 @@ http://pydoc.net/Python/jaraco.input/1.0.1/jaraco.input.win32.xinput/
 """
 
 from __future__ import print_function
+from __future__ import division
 
 import os
 import io
@@ -924,6 +925,19 @@ WIN_KEYBOARD_CODES = {
     0x105: 0,
 }
 
+WIN_MOUSE_CODES = {
+    0x0201: (0x110, 1, 589825),   # WM_LBUTTONDOWN --> BTN_LEFT
+    0x0202: (0x110, 0, 589825),   # WM_LBUTTONUP   --> BTN_LEFT
+    0x0204: (0x111, 1, 589826),   # WM_RBUTTONDOWN --> BTN_RIGHT
+    0x0205: (0x111, 0, 589826),   # WM_RBUTTONUP   --> BTN_RIGHT
+    0x0207: (0x112, 1, 589827),   # WM_MBUTTONDOWN --> BTN_MIDDLE
+    0x0208: (0x112, 0, 589827),   # WM_MBUTTONU    --> BTN_MIDDLE
+    0x020B: (0x113, 1, 589828),   # WM_XBUTTONDOWN --> BTN_SIDE
+    0x020C: (0x113, 0, 589828),   # WM_XBUTTONUP   --> BTN_SIDE
+    0x020B2: (0x114, 1, 589829),  # WM_XBUTTONDOWN --> BTN_EXTRA
+    0x020C2: (0x114, 0, 589829),  # WM_XBUTTONUP   --> BTN_EXTRA
+}
+
 # THING SING That thing can sing!
 # SONG LONG A long, long song.
 # Good-bye, Thing. You sing too long.
@@ -1169,6 +1183,95 @@ EVENT_MAP = (
     ('ForceFeedbackStatus', FORCE_FEEDBACK_STATUS),
     ('Max', MAX),
     ('Current', CURRENT))
+
+
+# Now comes all the structs we need to parse the infomation coming
+# from Windows.
+
+
+class KBDLLHookStruct(ctypes.Structure):
+    """Contains information about a low-level keyboard input event.
+
+    For full details see Microsoft's documentation:
+
+    https://msdn.microsoft.com/en-us/library/windows/desktop/
+    ms644967%28v=vs.85%29.aspx
+    """
+    # pylint: disable=too-few-public-methods
+    _fields_ = [("vk_code", DWORD),
+                ("scan_code", DWORD),
+                ("flags", DWORD),
+                ("time", ctypes.c_int)]
+
+
+class MSLLHookStruct(ctypes.Structure):
+    """Contains information about a low-level mouse input event.
+
+    For full details see Microsoft's documentation:
+
+    https://msdn.microsoft.com/en-us/library/windows/desktop/
+    ms644970%28v=vs.85%29.aspx
+    """
+    # pylint: disable=too-few-public-methods
+    _fields_ = [("x_pos", ctypes.c_long),
+                ("y_pos", ctypes.c_long),
+                ('reserved', ctypes.c_short),
+                ('mousedata', ctypes.c_short),
+                ("flags", DWORD),
+                ("time", DWORD),
+                ("extrainfo", ctypes.c_ulong)]
+
+
+class XinputGamepad(ctypes.Structure):
+    """Describes the current state of the Xbox 360 Controller.
+
+    For full details see Microsoft's documentation:
+
+    https://msdn.microsoft.com/en-us/library/windows/desktop/
+    microsoft.directx_sdk.reference.xinput_gamepad%28v=vs.85%29.aspx
+
+    """
+    # pylint: disable=too-few-public-methods
+    _fields_ = [
+        ('buttons', ctypes.c_ushort),  # wButtons
+        ('left_trigger', ctypes.c_ubyte),  # bLeftTrigger
+        ('right_trigger', ctypes.c_ubyte),  # bLeftTrigger
+        ('l_thumb_x', ctypes.c_short),  # sThumbLX
+        ('l_thumb_y', ctypes.c_short),  # sThumbLY
+        ('r_thumb_x', ctypes.c_short),  # sThumbRx
+        ('r_thumb_y', ctypes.c_short),  # sThumbRy
+    ]
+
+
+class XinputState(ctypes.Structure):
+    """Represents the state of a controller.
+
+    For full details see Microsoft's documentation:
+
+    https://msdn.microsoft.com/en-us/library/windows/desktop/
+    microsoft.directx_sdk.reference.xinput_state%28v=vs.85%29.aspx
+
+    """
+    # pylint: disable=too-few-public-methods
+    _fields_ = [
+        ('packet_number', ctypes.c_ulong),  # dwPacketNumber
+        ('gamepad', XinputGamepad),  # Gamepad
+    ]
+
+
+class XinputVibration(ctypes.Structure):
+    """Specifies motor speed levels for the vibration function of a
+    controller.
+
+    For full details see Microsoft's documentation:
+
+    https://msdn.microsoft.com/en-us/library/windows/desktop/
+    microsoft.directx_sdk.reference.xinput_vibration%28v=vs.85%29.aspx
+
+    """
+    # pylint: disable=too-few-public-methods
+    _fields_ = [("wLeftMotorSpeed", ctypes.c_ushort),
+                ("wRightMotorSpeed", ctypes.c_ushort)]
 
 
 class PermissionDenied(IOError):
@@ -1442,21 +1545,6 @@ class InputDevice(object):
         return next(iter(self))
 
 
-class KBDLLHookStruct(ctypes.Structure):
-    """Contains information about a low-level keyboard input event.
-
-    For full details see Microsoft's documentation:
-
-    https://msdn.microsoft.com/en-us/library/windows/desktop/
-    ms644967%28v=vs.85%29.aspx
-    """
-    # pylint: disable=too-few-public-methods
-    _fields_ = [("vk_code", DWORD),
-                ("scan_code", DWORD),
-                ("flags", DWORD),
-                ("time", ctypes.c_int)]
-
-
 class Keyboard(InputDevice):
     """A keyboard or other key-like device.
 
@@ -1537,58 +1625,6 @@ class Mouse(InputDevice):
 
     """
     pass
-
-
-class XinputGamepad(ctypes.Structure):
-    """Describes the current state of the Xbox 360 Controller.
-
-    For full details see Microsoft's documentation:
-
-    https://msdn.microsoft.com/en-us/library/windows/desktop/
-    microsoft.directx_sdk.reference.xinput_gamepad%28v=vs.85%29.aspx
-
-    """
-    # pylint: disable=too-few-public-methods
-    _fields_ = [
-        ('buttons', ctypes.c_ushort),  # wButtons
-        ('left_trigger', ctypes.c_ubyte),  # bLeftTrigger
-        ('right_trigger', ctypes.c_ubyte),  # bLeftTrigger
-        ('l_thumb_x', ctypes.c_short),  # sThumbLX
-        ('l_thumb_y', ctypes.c_short),  # sThumbLY
-        ('r_thumb_x', ctypes.c_short),  # sThumbRx
-        ('r_thumb_y', ctypes.c_short),  # sThumbRy
-    ]
-
-
-class XinputState(ctypes.Structure):
-    """Represents the state of a controller.
-
-    For full details see Microsoft's documentation:
-
-    https://msdn.microsoft.com/en-us/library/windows/desktop/
-    microsoft.directx_sdk.reference.xinput_state%28v=vs.85%29.aspx
-
-    """
-    # pylint: disable=too-few-public-methods
-    _fields_ = [
-        ('packet_number', ctypes.c_ulong),  # dwPacketNumber
-        ('gamepad', XinputGamepad),  # Gamepad
-    ]
-
-
-class XinputVibration(ctypes.Structure):
-    """Specifies motor speed levels for the vibration function of a
-    controller.
-
-    For full details see Microsoft's documentation:
-
-    https://msdn.microsoft.com/en-us/library/windows/desktop/
-    microsoft.directx_sdk.reference.xinput_vibration%28v=vs.85%29.aspx
-
-    """
-    # pylint: disable=too-few-public-methods
-    _fields_ = [("wLeftMotorSpeed", ctypes.c_ushort),
-                ("wRightMotorSpeed", ctypes.c_ushort)]
 
 
 class GamePad(InputDevice):
@@ -1945,16 +1981,16 @@ class DeviceManager(object):
         self._find_xinput()
         self._detect_gamepads()
         self._count_devices()
-        char_path_override = None
         if self._raw_device_counts['keyboards'] > 0:
             self.keyboards.append(Keyboard(
                 self,
-                "/dev/input/by-id/usb-A_Windows_Keyboard-event-kbd",
-                char_path_override))
+                "/dev/input/by-id/usb-A_Nice_Keyboard-event-kbd"))
 
-        #  if self._raw_device_counts['mice'] > 1:
-        #      self.mice.append(Mouse(self, device_path,
-        #                             char_path_override))
+        if self._raw_device_counts['mice'] > 1:
+            print("Hello Mice", self._raw_device_counts['mice'])
+            self.mice.append(Mouse(
+                self,
+                "/dev/input/by-id/usb-A_Nice_Mouse_called_Arthur-event-mouse"))
 
     def _detect_gamepads(self):
         """Find gamepads."""
