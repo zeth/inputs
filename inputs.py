@@ -162,6 +162,7 @@ from __future__ import print_function
 from __future__ import division
 
 import os
+import sys
 import io
 import glob
 import struct
@@ -173,9 +174,11 @@ from itertools import count
 from operator import itemgetter
 import ctypes
 from multiprocessing import Process, Pipe
-import sys
 
 WIN = True if platform.system() == 'Windows' else False
+MAC = True if platform.system() == 'Darwin' else False
+NIX = True if platform.system() == 'Linux' else False
+
 if WIN:
     DWORD = ctypes.wintypes.DWORD
     HANDLE = ctypes.wintypes.HANDLE
@@ -189,6 +192,21 @@ else:
     LPARAM = ctypes.c_ulonglong
     MSG = ctypes.Structure
 
+OLD = sys.version_info < (3, 4)
+
+
+def chunks(raw):
+    """Yield successive 24-sized chunks from raw."""
+    for i in range(0, len(raw), 24):
+        yield struct.unpack(EVENT_FORMAT, raw[i:i+24])
+
+
+def iter_unpack(raw):
+    """Yield successive 24-sized chunks from message."""
+    if OLD:
+        return chunks(raw)
+    else:
+        return struct.iter_unpack(EVENT_FORMAT, raw)
 
 # long, long, unsigned short, unsigned short, int
 EVENT_FORMAT = str('llHHi')
@@ -1147,6 +1165,46 @@ WINCODES = (
     (0xFF, 185)
 )
 
+MAC_EVENT_CODES = (
+    (1, ("Key", 0x110, 1, 589825)),    # NSLeftMouseDown
+    (2, ("Key", 0x110, 0, 589825)),    # NSLeftMouseUp
+    (3, ("Key", 0x111, 1, 589826)),    # NSRightMouseDown
+    (4, ("Key", 0x111, 0, 589826)),    # NSRightMouseUp
+    (5, (None, 0, 0, 0)),    # NSMouseMoved
+    (6, (None, 0, 0, 0)),    # NSLeftMouseDragged
+    (7, (None, 0, 0, 0)),    # NSRightMouseDragged
+    (8, (None, 0, 0, 0)),    # NSMouseEntered
+    (9, (None, 0, 0, 0)),    # NSMouseExited
+    (10, (None, 0, 0, 0)),   # NSKeyDown
+    (11, (None, 0, 0, 0)),   # NSKeyUp
+    (12, (None, 0, 0, 0)),   # NSFlagsChanged
+    (13, (None, 0, 0, 0)),   # NSAppKitDefined
+    (14, (None, 0, 0, 0)),   # NSSystemDefined
+    (15, (None, 0, 0, 0)),   # NSApplicationDefined
+    (16, (None, 0, 0, 0)),   # NSPeriodic
+    (17, (None, 0, 0, 0)),   # NSCursorUpdate
+    (22, (None, 0, 0, 0)),   # NSScrollWheel
+    (23, (None, 0, 0, 0)),   # NSTabletPoint
+    (24, (None, 0, 0, 0)),   # NSTabletProximity
+    (25, (None, 0, 0, 0)),   # NSOtherMouseDown
+    (25.2, ("Key", 0x112, 1, 589827)),   # BTN_MIDDLE
+    (25.3, ("Key", 0x113, 1, 589828)),   # BTN_SIDE
+    (25.4, ("Key", 0x114, 1, 589829)),   # BTN_EXTRA
+    (26, (None, 0, 0, 0)),   # NSOtherMouseUp
+    (26.2, ("Key", 0x112, 0, 589827)),   # BTN_MIDDLE
+    (26.3, ("Key", 0x113, 0, 589828)),   # BTN_SIDE
+    (26.4, ("Key", 0x114, 0, 589829)),   # BTN_EXTRA
+    (27, (None, 0, 0, 0)),   # NSOtherMouseDragged
+    (29, (None, 0, 0, 0)),   # NSEventTypeGesture
+    (30, (None, 0, 0, 0)),   # NSEventTypeMagnify
+    (31, (None, 0, 0, 0)),   # NSEventTypeSwipe
+    (18, (None, 0, 0, 0)),   # NSEventTypeRotate
+    (19, (None, 0, 0, 0)),   # NSEventTypeBeginGesture
+    (20, (None, 0, 0, 0)),   # NSEventTypeEndGesture
+    (32, (None, 0, 0, 0)),   # NSEventTypeSmartMagnify
+    (33, (None, 0, 0, 0)),   # NSEventTypeQuickLook
+    (34, (None, 0, 0, 0)),   # NSEventTypePressure
+)
 
 # We have yet to support force feedback but probably should
 # eventually:
@@ -1648,7 +1706,7 @@ class MouseEvdev(object):
         wheels found on the vast majority of mice. It also works on
         the analogue ball on the top of the Apple mouse.
 
-        What do the analogue scroll wheels found on £200 high end
+        What do the analogue scroll wheels found on 200 quid high end
         gaming mice do? If the lowest unit is 120 then we are okay. If
         they report changes of less than 120 units Windows, then this
         might be an unacceptable loss of precision. Needless to say, I
@@ -1713,6 +1771,251 @@ def mouse_process(pipe):
     mouse.listen()
 
 
+def mac_mouse_process(pipe):
+    """Single subprocess for reading mouse events on Mac."""
+    # pylint: disable=import-error,too-many-locals
+
+    # Note Objective C does not support a Unix style fork.
+    # So these imports have to be inside the child subprocess since
+    # otherwise the child process cannot use them.
+
+    from Foundation import NSObject, NSLog
+    from AppKit import NSApplication, NSApp
+    from Cocoa import (NSEvent, NSLeftMouseDownMask,
+                       NSLeftMouseUpMask, NSRightMouseDownMask,
+                       NSRightMouseUpMask, NSMouseMovedMask,
+                       NSLeftMouseDraggedMask,
+                       NSRightMouseDraggedMask, NSMouseEnteredMask,
+                       NSMouseExitedMask, NSScrollWheelMask,
+                       NSOtherMouseDownMask, NSOtherMouseUpMask)
+    from PyObjCTools import AppHelper
+
+    class MacMouseSetup(NSObject):
+        """Loosely emulate Evdev mouse behaviour on the Mac Windows.  Listen
+        for key events then buffer them in a pipe.
+
+        """
+        def init_with_handler(self, handler):
+            """
+            Init method that receives the write end of the pipe.
+            """
+            # ALWAYS call the super's designated initializer.
+            # Also, make sure to re-bind "self" just in case it
+            # returns something else!
+            self = super(MacMouseSetup, self).init()
+
+            self.handler = handler
+
+            # Unlike Python's __init__, initializers MUST return self,
+            # because they are allowed to return any object!
+            return self
+
+        # pylint: disable=invalid-name, unused-argument
+        def applicationDidFinishLaunching_(self, notification):
+            """Bind the listen method as the handler for mouse events."""
+
+            mask = (NSLeftMouseDownMask | NSLeftMouseUpMask |
+                    NSRightMouseDownMask | NSRightMouseUpMask |
+                    NSMouseMovedMask | NSLeftMouseDraggedMask |
+                    NSRightMouseDraggedMask | NSScrollWheelMask |
+                    NSOtherMouseDownMask | NSOtherMouseUpMask)
+            NSEvent.addGlobalMonitorForEventsMatchingMask_handler_(
+                mask, self.handler)
+
+    class MacMouseEvdev(object):
+        """Loosely emulate Evdev mouse behaviour on the Mac Windows.
+        Listen for key events then buffer them in a pipe.
+        """
+        def __init__(self, pipe):
+            self.pipe = pipe
+            self.app = None
+            self.type_codes = {
+                "Sync": 0x00,
+                "Key": 0x01,
+                "Relative": 0x02,
+                "Absolute": 0x03,
+                "Misc": 0x04
+            }
+            self.codes = dict(MAC_EVENT_CODES)
+            self.install_handle_key_input()
+
+        def install_handle_key_input(self):
+            """Install the hook."""
+            self.app = NSApplication.sharedApplication()
+            # pylint: disable=no-member
+            delegate = MacMouseSetup.alloc().init_with_handler(
+                self.handle_mouse_input)
+            NSApp().setDelegate_(delegate)
+            AppHelper.runEventLoop()
+
+        def __del__(self):
+            """Stop the listener on deletion."""
+            AppHelper.stopEventLoop()
+
+        def handle_mouse_input(self, event):
+            """Process the mouse event."""
+
+            timeval = self.__get_timeval()
+            events = []
+            code = event.type()
+
+            # Deal with buttons
+
+            buttonnumber = event.buttonNumber()
+
+            # Identify buttons 3,4,5
+            if code == 25 or code == 26:
+                code = code + (buttonnumber * 0.1)
+
+            # Add buttons to events
+            event_type, event_code, value, scan = self.codes[code]
+            if event_type == "Key":
+                scan_event, key_event = self.emulate_press(
+                    event_code, scan, value, timeval)
+                events.append(scan_event)
+                events.append(key_event)
+
+            delta_x = round(event.deltaX())
+            delta_y = round(event.deltaY())
+            delta_z = round(event.deltaY())
+
+            # Mouse wheel
+            if code == 22:
+                if delta_x:
+                    events.append(
+                        self.emulate_wheel(delta_x, 'x', timeval))
+                if delta_y:
+                    events.append(
+                        self.emulate_wheel(delta_y, 'y', timeval))
+                if delta_z:
+                    events.append(
+                        self.emulate_wheel(delta_z, 'z', timeval))
+            # Other relative mouse movements
+            else:
+                if delta_x:
+                    events.append(
+                        self.emulate_rel(0x00,
+                                         delta_x,
+                                         timeval))
+                if delta_y:
+                    events.append(
+                        self.emulate_rel(0x01,
+                                         delta_y,
+                                         timeval))
+                if delta_z:
+                    events.append(
+                        self.emulate_rel(0x02,
+                                         delta_z,
+                                         timeval))
+
+            # Add in the absolute position of the mouse cursor
+            point = event.locationInWindow()
+            x_pos = round(point.x)
+            y_pos = round(point.y)
+            x_event, y_event = self.emulate_abs(x_pos, y_pos, timeval)
+            events.append(x_event)
+            events.append(y_event)
+
+            # End with a sync marker
+            events.append(self.__create_event_object(
+                "Sync",
+                0,
+                0,
+                timeval))
+
+            # We are done
+            self.__write_to_pipe(events)
+
+        def emulate_abs(self, x_val, y_val, timeval):
+            """Emulate the absolute co-ordinates of the mouse cursor."""
+            x_event = self.__create_event_object(
+                "Absolute",
+                0x00,
+                x_val,
+                timeval)
+            y_event = self.__create_event_object(
+                "Absolute",
+                0x01,
+                y_val,
+                timeval)
+            return x_event, y_event
+
+        def emulate_wheel(self, data, direction, timeval):
+            """Emulate rel values for the mouse wheel.
+            """
+            if direction == 'x':
+                code = 0x06
+            elif direction == 'z':
+                # Not enitely sure if this exists
+                code = 0x07
+            else:
+                code = 0x08
+
+            return self.__create_event_object(
+                "Relative",
+                code,
+                data,
+                timeval)
+
+        def emulate_rel(self, key_code, value, timeval):
+            """Emulate the relative changes of the mouse cursor."""
+            return self.__create_event_object(
+                "Relative",
+                key_code,
+                value,
+                timeval)
+
+        def emulate_press(self, key_code, scan_code, value, timeval):
+            """Emulate a button press."""
+            scan_event = self.__create_event_object(
+                "Misc",
+                0x04,
+                scan_code,
+                timeval)
+            key_event = self.__create_event_object(
+                "Key",
+                key_code,
+                value,
+                timeval)
+            return scan_event, key_event
+
+        @staticmethod
+        def __get_timeval():
+            """Get the time and make it into C style timeval."""
+            frac, whole = math.modf(time.time())
+            microseconds = math.floor(frac * 1000000)
+            seconds = math.floor(whole)
+            return seconds, microseconds
+
+        def __create_event_object(self,
+                                  event_type,
+                                  code,
+                                  value,
+                                  timeval=None):
+            """Create an evdev style structure."""
+            if not timeval:
+                timeval = self.__get_timeval()
+            try:
+                event_code = self.type_codes[event_type]
+            except KeyError:
+                raise UnknownEventType(
+                    "We don't know what kind of event a %s is.",
+                    event_type)
+            event = struct.pack(EVENT_FORMAT,
+                                timeval[0],
+                                timeval[1],
+                                event_code,
+                                code,
+                                value)
+            return event
+
+        def __write_to_pipe(self, event_list):
+            """Send event back to the mouse object."""
+            self.pipe.send_bytes(b''.join(event_list))
+
+    mouse = MacMouseEvdev(pipe)
+
+
 class InputDevice(object):
     """A user input device."""
     # pylint: disable=too-many-instance-attributes
@@ -1729,7 +2032,7 @@ class InputDevice(object):
             self._character_device_path = os.path.realpath(device_path)
         self._character_file = None
 
-        if WIN:
+        if WIN or MAC:
             self.__pipe = None
             self._listener = None
         else:
@@ -1801,7 +2104,7 @@ class InputDevice(object):
         data = self._get_data(read_size)
         if not data:
             return
-        evdev_objects = struct.iter_unpack(EVENT_FORMAT, data)
+        evdev_objects = iter_unpack(data)
         events = [self._make_event(*event) for event in evdev_objects]
         return events
 
@@ -1825,7 +2128,7 @@ class InputDevice(object):
     def _pipe(self):
         """On Windows we use a pipe to emulate a Linux style character
         buffer."""
-        if not WIN:
+        if NIX:
             return None
 
         if not self.__pipe:
@@ -1840,9 +2143,10 @@ class InputDevice(object):
         return self.__pipe
 
     def __del__(self):
-        if 'WIN' in globals():
-            if WIN and self.__pipe:
-                self._listener.terminate()
+        if 'WIN' in globals() or 'MAC' in globals():
+            if WIN or MAC:
+                if self.__pipe:
+                    self._listener.terminate()
 
 
 class Keyboard(InputDevice):
@@ -1910,11 +2214,14 @@ class Mouse(InputDevice):
     @staticmethod
     def _get_target_function():
         """Get the correct target function."""
-        return mouse_process
+        if WIN:
+            return mouse_process
+        if MAC:
+            return mac_mouse_process
 
     def _get_data(self, read_size):
         """Get data from the character device."""
-        if not WIN:
+        if NIX:
             return super(Mouse, self)._get_data(read_size)
         return self._pipe.recv_bytes()
 
@@ -2224,6 +2531,8 @@ class DeviceManager(object):
                 'unknown': 0
             }
             self._find_devices_win()
+        elif MAC:
+            self._find_devices_mac()
         else:
             self._find_devices()
         self._update_all_devices()
@@ -2287,6 +2596,16 @@ class DeviceManager(object):
             self.mice.append(Mouse(
                 self,
                 "/dev/input/by-id/usb-A_Nice_Mouse_called_Arthur-event-mouse"))
+
+    def _find_devices_mac(self):
+        """Find devices on Mac."""
+        self.keyboards.append(Keyboard(
+            self,
+            "/dev/input/by-id/usb-A_Nice_Keyboard-event-kbd"))
+
+        self.mice.append(Mouse(
+            self,
+            "/dev/input/by-id/usb-A_Nice_Mouse_called_Arthur-event-mouse"))
 
     def _detect_gamepads(self):
         """Find gamepads."""
