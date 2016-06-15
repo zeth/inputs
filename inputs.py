@@ -1366,6 +1366,126 @@ class InputEvent(object):
         self.ev_type = event_info["ev_type"]
 
 
+class BaseListener(object):
+    """Loosely emulate Evdev keyboard behaviour on other platforms.
+    Listen (hook in Windows terminology) for key events then buffer
+    them in a pipe.
+    """
+
+    def __init__(self, pipe):
+        self.pipe = pipe
+        self.app = None
+        self.type_codes = {
+            "Sync": 0x00,
+            "Key": 0x01,
+            "Relative": 0x02,
+            "Absolute": 0x03,
+            "Misc": 0x04
+        }
+        if not getattr(self, "codes", None):
+            self.codes = None
+        self.install_handle_input()
+
+    def install_handle_input(self):
+        """Install the input handler."""
+        pass
+
+    @staticmethod
+    def get_timeval():
+        """Get the time and make it into C style timeval."""
+        frac, whole = math.modf(time.time())
+        microseconds = math.floor(frac * 1000000)
+        seconds = math.floor(whole)
+        return seconds, microseconds
+
+    def create_event_object(self,
+                            event_type,
+                            code,
+                            value,
+                            timeval=None):
+        """Create an evdev style structure."""
+        if not timeval:
+            timeval = self.get_timeval()
+        try:
+            event_code = self.type_codes[event_type]
+        except KeyError:
+            raise UnknownEventType(
+                "We don't know what kind of event a %s is.",
+                event_type)
+        event = struct.pack(EVENT_FORMAT,
+                            timeval[0],
+                            timeval[1],
+                            event_code,
+                            code,
+                            value)
+        return event
+
+    def write_to_pipe(self, event_list):
+        """Send event back to the mouse object."""
+        self.pipe.send_bytes(b''.join(event_list))
+
+    def emulate_wheel(self, data, direction, timeval):
+        """Emulate rel values for the mouse wheel.
+        """
+        if direction == 'x':
+            code = 0x06
+        elif direction == 'z':
+            # Not enitely sure if this exists
+            code = 0x07
+        else:
+            code = 0x08
+
+        return self.create_event_object(
+            "Relative",
+            code,
+            data,
+            timeval)
+
+    def emulate_rel(self, key_code, value, timeval):
+        """Emulate the relative changes of the mouse cursor."""
+        return self.create_event_object(
+            "Relative",
+            key_code,
+            value,
+            timeval)
+
+    def emulate_press(self, key_code, scan_code, value, timeval):
+        """Emulate a button press."""
+        scan_event = self.create_event_object(
+            "Misc",
+            0x04,
+            scan_code,
+            timeval)
+        key_event = self.create_event_object(
+            "Key",
+            key_code,
+            value,
+            timeval)
+        return scan_event, key_event
+
+    def sync_marker(self, timeval):
+        """Separate groups of events."""
+        return self.create_event_object(
+            "Sync",
+            0,
+            0,
+            timeval)
+
+    def emulate_abs(self, x_val, y_val, timeval):
+        """Emulate the absolute co-ordinates of the mouse cursor."""
+        x_event = self.create_event_object(
+            "Absolute",
+            0x00,
+            x_val,
+            timeval)
+        y_event = self.create_event_object(
+            "Absolute",
+            0x01,
+            y_val,
+            timeval)
+        return x_event, y_event
+
+
 class KeyBoardEvdev(object):
     """Loosely emulate Evdev keyboard behaviour on Windows.  Listen (hook
     in Windows terminology) for key events then buffer them in a pipe.
@@ -1822,20 +1942,12 @@ def mac_mouse_process(pipe):
             NSEvent.addGlobalMonitorForEventsMatchingMask_handler_(
                 mask, self.handler)
 
-    class MacMouseEvdev(object):
+    class MacMouseEvdev(BaseListener):
         """Loosely emulate Evdev mouse behaviour on the Mac Windows.
         Listen for key events then buffer them in a pipe.
         """
         def __init__(self, pipe):
-            self.pipe = pipe
-            self.app = None
-            self.type_codes = {
-                "Sync": 0x00,
-                "Key": 0x01,
-                "Relative": 0x02,
-                "Absolute": 0x03,
-                "Misc": 0x04
-            }
+            super(MacMouseEvdev, self).__init__(pipe)
             self.codes = dict(MAC_EVENT_CODES)
             self.install_handle_key_input()
 
@@ -1855,7 +1967,7 @@ def mac_mouse_process(pipe):
         def handle_mouse_input(self, event):
             """Process the mouse event."""
 
-            timeval = self.__get_timeval()
+            timeval = self.get_timeval()
             events = []
             code = event.type()
 
@@ -1917,101 +2029,10 @@ def mac_mouse_process(pipe):
             events.append(y_event)
 
             # End with a sync marker
-            events.append(self.__create_event_object(
-                "Sync",
-                0,
-                0,
-                timeval))
+            events.append(self.sync_marker(timeval))
 
             # We are done
-            self.__write_to_pipe(events)
-
-        def emulate_abs(self, x_val, y_val, timeval):
-            """Emulate the absolute co-ordinates of the mouse cursor."""
-            x_event = self.__create_event_object(
-                "Absolute",
-                0x00,
-                x_val,
-                timeval)
-            y_event = self.__create_event_object(
-                "Absolute",
-                0x01,
-                y_val,
-                timeval)
-            return x_event, y_event
-
-        def emulate_wheel(self, data, direction, timeval):
-            """Emulate rel values for the mouse wheel.
-            """
-            if direction == 'x':
-                code = 0x06
-            elif direction == 'z':
-                # Not enitely sure if this exists
-                code = 0x07
-            else:
-                code = 0x08
-
-            return self.__create_event_object(
-                "Relative",
-                code,
-                data,
-                timeval)
-
-        def emulate_rel(self, key_code, value, timeval):
-            """Emulate the relative changes of the mouse cursor."""
-            return self.__create_event_object(
-                "Relative",
-                key_code,
-                value,
-                timeval)
-
-        def emulate_press(self, key_code, scan_code, value, timeval):
-            """Emulate a button press."""
-            scan_event = self.__create_event_object(
-                "Misc",
-                0x04,
-                scan_code,
-                timeval)
-            key_event = self.__create_event_object(
-                "Key",
-                key_code,
-                value,
-                timeval)
-            return scan_event, key_event
-
-        @staticmethod
-        def __get_timeval():
-            """Get the time and make it into C style timeval."""
-            frac, whole = math.modf(time.time())
-            microseconds = math.floor(frac * 1000000)
-            seconds = math.floor(whole)
-            return seconds, microseconds
-
-        def __create_event_object(self,
-                                  event_type,
-                                  code,
-                                  value,
-                                  timeval=None):
-            """Create an evdev style structure."""
-            if not timeval:
-                timeval = self.__get_timeval()
-            try:
-                event_code = self.type_codes[event_type]
-            except KeyError:
-                raise UnknownEventType(
-                    "We don't know what kind of event a %s is.",
-                    event_type)
-            event = struct.pack(EVENT_FORMAT,
-                                timeval[0],
-                                timeval[1],
-                                event_code,
-                                code,
-                                value)
-            return event
-
-        def __write_to_pipe(self, event_list):
-            """Send event back to the mouse object."""
-            self.pipe.send_bytes(b''.join(event_list))
+            self.write_to_pipe(events)
 
     mouse = MacMouseEvdev(pipe)
 
