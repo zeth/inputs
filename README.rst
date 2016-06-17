@@ -1,6 +1,23 @@
 Inputs
 ======
 
+    .. image:: https://raw.githubusercontent.com/zeth/inputs/master/devices.png
+
+Install
+-------
+
+Install through pypi::
+
+    pip install inputs
+
+Or download it from github::
+
+    git clone https://github.com/zeth/inputs.git
+    python setup.py install
+
+About
+-----
+
 The inputs module provides an easy way for your Python program to
 listen for user input.
 
@@ -17,8 +34,8 @@ To get started quickly, just use the following::
 For other examples, keep reading.
 
 There are no dependencies on Raspberry Pi, Linux or Windows. On the
-Mac, inputs.py needs PyObjC which Apple installs by default in the
-system Python. To get PyObjC for your own user-installed Python go to:
+Mac, inputs needs PyObjC which Apple installs by default in the system
+Python. To get PyObjC for your own user-installed Python go to:
 
     http://pythonhosted.org/pyobjc/
 
@@ -52,9 +69,9 @@ This module is a single file, so if you cannot or are not allowed to
 use setuptools for some reason, just copy the file inputs.py into your
 project.
 
-inputs.py is very simple. The majority of the file is just constants,
-so that no matter what platform you are on, input devices will report
-the same codes.
+The inputs module is very simple. The majority of the file is just
+constants, so that no matter what platform you are on, input devices
+will report the same codes to your program.
 
 Note to Children
 ----------------
