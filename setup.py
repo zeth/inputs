@@ -14,13 +14,18 @@ inputs_classifiers = [
     "License :: OSI Approved :: BSD License",
     "Topic :: Software Development :: Libraries",
     "Topic :: Utilities",
+    "Topic :: System :: Hardware :: Hardware Drivers",
+    "Topic :: Software Development :: Embedded Systems",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS :: MacOS X",
 ]
 
 with open("README.rst", "r") as fp:
     inputs_long_description = fp.read()
 
 setup(name="inputs",
-      description = 'Easy to use, cross-platform, user input device support for Python, i.e. keyboards, mice, gamepads, etc.',
+      description = 'Cross-platform Python support for keyboards, mice and gamepads.',
       version=inputs.__version__,
       author="Zeth",
       author_email="theology@gmail.com",

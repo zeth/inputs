@@ -1,10 +1,14 @@
 Inputs
 ======
 
-Cross-platform Python support for keyboards, mice and gamepads.
+The inputs module provides an easy way for your Python program to
+listen for user input.
 
 Currently supported platforms are the Raspberry Pi, Linux, Windows and
 the Apple Mac.
+
+Python versions supported are all versions of Python 3 and your
+granddad's Python 2.7.
 
 To get started quickly, just use the following::
 
@@ -13,18 +17,23 @@ To get started quickly, just use the following::
 For other examples, keep reading.
 
 There are no dependencies on Raspberry Pi, Linux or Windows. On the
-Mac, inputs.py uses PyObjC which Apple installs by default in the
+Mac, inputs.py needs PyObjC which Apple installs by default in the
 system Python. To get PyObjC for your own user-installed Python go to:
 
     http://pythonhosted.org/pyobjc/
+
+To get involved, please visit the github project at:
+
+    https://github.com/zeth/inputs
+
 
 Why Inputs?
 -----------
 
 Obviously high level graphical libraries such as PyGame and PyQT will
-provide user input support in a very friendly way. However, inputs
-does not require your program to use any particular graphical toolkit,
-or even have a monitor at all.
+provide user input support in a very friendly way. However, the inputs
+module does not require your program to use any particular graphical
+toolkit, or even have a monitor at all.
 
 In the Embedded Linux, Raspberry Pi or Internet of Things type
 situation, it is quite common not to have an X-server installed or
@@ -152,7 +161,7 @@ On Windows, I haven't bothered to support it yet. It is not officially
 exposed to applications and using it unofficially requires every user
 to turn Game DVR off in the Windows Xbox app settings.
 
-On macOS, 
+On macOS,
 
 Raspberry Pi Sense HAT
 ----------------------
@@ -189,7 +198,8 @@ Mac permissions
 ---------------
 
 On the Mac, until you write a proper installer for your program, you
-will probably have to allow your program to access the input devices.
+will probably have to use the settings application to allow your
+program to access the input devices.
 
     .. image:: https://raw.githubusercontent.com/zeth/inputs/master/macsecurity.png
 
@@ -207,6 +217,7 @@ Sense HAT stick support in this module but more importantly also
 taught me an easier way to parse the Evdev event format in Python:
 
     https://github.com/RPi-Distro/python-sense-hat/blob/master/sense_hat/stick.py
+
     https://github.com/waveform80/pisense/blob/master/pisense/stick.py
 
 Thanks to Andy (r4dian) and Jason R. Coombs whose existing (MIT
@@ -215,4 +226,5 @@ helped me understand xinput greatly. Xbox 360 controller support on
 Windows here is based on their work:
 
     https://github.com/r4dian/Xbox-360-Controller-for-Python
+
     http://pydoc.net/Python/jaraco.input/1.0.1/jaraco.input.win32.xinput/
