@@ -7,9 +7,10 @@ Inputs aims to provide easy to use, cross-platform, user input device
 support for Python. I.e. keyboards, mice, gamepads, etc.
 
 It is still early days. Currently supported platforms are the
-Raspberry Pi, Linux and Windows. Hopefully Mac OS X, BSD and Android
-should be supported soon. Optional Asyncio-based event loop support
-will be included eventually.
+Raspberry Pi, Linux. Windows and Mac OS X.
+
+BSD and Android should be supported soon. Optional Asyncio-based event
+loop support will be included eventually.
 
 Obviously high level graphical libraries such as PyGame and PyQT will
 provide user input support in a very friendly way. However, this
@@ -2247,10 +2248,6 @@ class Keyboard(InputDevice):
 
     Original umapped scan code, followed by the important key info
     followed by a sync.
-
-    ('Misc', 'MSC_SCAN', 30)
-    ('Key', 'KEY_A', 1)
-    ('Sync', 'SYN_REPORT', 0)
     """
     @staticmethod
     def _get_target_function():
@@ -2269,42 +2266,6 @@ class Keyboard(InputDevice):
 
 class Mouse(InputDevice):
     """A mouse or other pointing-like device.
-
-    For a button, just the key then sync.
-
-    For example, key down:
-    ('Key', 'BTN_LEFT', 1)
-    ('Sync', 'SYN_REPORT', 0)
-
-    Another example, key up:
-    ('Key', 'BTN_LEFT', 0)
-    ('Sync', 'SYN_REPORT', 0)
-
-    For a mouse, just rel then sync.
-    ('Relative', 'REL_Y', -1)
-    ('Sync', 'SYN_REPORT', 0)
-
-    Mouse left is:
-    ('Relative', 'REL_X', -1)
-    ('Sync', 'SYN_REPORT', 0)
-
-    Mouse right is:
-    ('Relative', 'REL_X', 1)
-    ('Sync', 'SYN_REPORT', 0)
-
-    Mouse up is:
-    ('Relative', 'REL_Y', -1)
-    ('Sync', 'SYN_REPORT', 0)
-
-    Mouse down is:
-    ('Relative', 'REL_Y', 1)
-    ('Sync', 'SYN_REPORT', 0)
-
-    Button left, middle, right
-    ('Key', 'BTN_LEFT', 1)
-    ('Key', 'BTN_MIDDLE', 1)
-    ('Key', 'BTN_RIGHT', 1)
-
     """
 
     @staticmethod
@@ -2322,7 +2283,7 @@ class Mouse(InputDevice):
         return self._pipe.recv_bytes()
 
 
-# I made GamePad this before Mouse and Keyboard above, and have
+# I made this GamePad class before Mouse and Keyboard above, and have
 # learned a lot about Windows in the process.  This can probably be
 # simplified massively and made to match Mouse and Keyboard more.
 
