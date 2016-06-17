@@ -1561,6 +1561,19 @@ class BaseListener(object):
 
     def emulate_wheel(self, data, direction, timeval):
         """Emulate rel values for the mouse wheel.
+
+        In evdev, a single click forwards of the mouse wheel is 1 and
+        a click back is -1. Windows uses 120 and -120. We floor divide
+        the Windows number by 120. This is fine for the digital scroll
+        wheels found on the vast majority of mice. It also works on
+        the analogue ball on the top of the Apple mouse.
+
+        What do the analogue scroll wheels found on 200 quid high end
+        gaming mice do? If the lowest unit is 120 then we are okay. If
+        they report changes of less than 120 units Windows, then this
+        might be an unacceptable loss of precision. Needless to say, I
+        don't have such a mouse to test one way or the other.
+
         """
         if direction == 'x':
             code = 0x06
@@ -1569,6 +1582,9 @@ class BaseListener(object):
             code = 0x07
         else:
             code = 0x08
+
+        if WIN:
+            data = data // 120
 
         return self.create_event_object(
             "Relative",
@@ -1585,7 +1601,20 @@ class BaseListener(object):
             timeval)
 
     def emulate_press(self, key_code, scan_code, value, timeval):
-        """Emulate a button press."""
+        """Emulate a button press.
+
+        Currently supports 5 buttons.
+
+        The Microsoft documentation does not define what happens with
+        a mouse with more than five buttons, and I don't have such a
+        mouse.
+
+        From reading the Linux sources, I guess evdev can support up
+        to 255 buttons.
+
+        Therefore, I guess we could support more buttons quite easily,
+        if we had any useful hardware.
+        """
         scan_event = self.create_event_object(
             "Misc",
             0x04,
@@ -1750,7 +1779,7 @@ def keyboard_process(pipe):
     keyboard.listen()
 
 
-class MouseEvdev(object):
+class MouseEvdev(BaseListener):
     """Loosely emulate Evdev mouse behaviour on Windows.  Listen (hook
     in Windows terminology) for key events then buffer them in a pipe.
     """
@@ -1759,15 +1788,7 @@ class MouseEvdev(object):
         self.hooked = None
         self.pointer = None
         self.mouse_codes = WIN_MOUSE_CODES
-        self.install_handle_input()
-
-        self.type_codes = {
-            "Sync": 0x00,
-            "Key": 0x01,
-            "Relative": 0x02,
-            "Absolute": 0x03,
-            "Misc": 0x04
-        }
+        super(MouseEvdev, self).__init__(pipe)
 
     @staticmethod
     def listen():
@@ -1796,10 +1817,6 @@ class MouseEvdev(object):
         if not self.hooked:
             return False
         return True
-
-    def __del__(self):
-        """Clean up when deleted."""
-        self.uninstall_handle_input()
 
     def uninstall_handle_input(self):
         """Remove the hook."""
@@ -1830,14 +1847,6 @@ class MouseEvdev(object):
         # next event
         return ctypes.windll.user32.CallNextHookEx(
             self.hooked, ncode, wparam, lparam)
-
-    @staticmethod
-    def get_timeval():
-        """Get the time and make it into C style timeval."""
-        frac, whole = math.modf(time.time())
-        microseconds = math.floor(frac * 1000000)
-        seconds = math.floor(whole)
-        return seconds, microseconds
 
     def emulate_mouse(self, key_code, x_val, y_val, data):
         """Emulate the ev codes using the data Windows has given us.
@@ -1876,15 +1885,26 @@ class MouseEvdev(object):
             pass
         elif key_code == 0x020A:
             # We have a vertical mouse wheel turn
-            events.append(self.emulate_wheel(data, timeval))
+            events.append(self.emulate_wheel(data, 'y', timeval))
         elif key_code == 0x020E:
             # We have a horizontal mouse wheel turn
             # https://msdn.microsoft.com/en-us/library/windows/desktop/
             # ms645614%28v=vs.85%29.aspx
-            events.append(self.emulate_wheel(data, timeval, horizontal=True))
+            events.append(self.emulate_wheel(data, 'x', timeval))
         else:
             # We have a button press.
-            scan_event, key_event = self.emulate_press(key_code, data, timeval)
+
+            # Distinguish the second extra button
+            if key_code == 0x020B and data == 2:
+                key_code = 0x020B2
+            elif key_code == 0x020C and data == 2:
+                key_code = 0x020C2
+
+            # Get the mouse codes
+            code, value, scan_code = self.mouse_codes[key_code]
+            # Add in the press events
+            scan_event, key_event = self.emulate_press(
+                code, scan_code, value, timeval)
             events.append(scan_event)
             events.append(key_event)
 
@@ -1903,107 +1923,6 @@ class MouseEvdev(object):
 
         # We are done
         self.write_to_pipe(events)
-
-    def emulate_press(self, key_code, data, timeval):
-        """Emulate a button press.
-
-        Currently supports 5 buttons.
-
-        The Microsoft documentation does not define what happens with
-        a mouse with more than five buttons, and I don't have such a
-        mouse.
-
-        From reading the Linux sources, I guess evdev can support up
-        to 255 buttons.
-
-        Therefore, I guess we could support more buttons quite easily,
-        if we had any useful hardware.
-        """
-        # Distinguish the second extra button
-        if key_code == 0x020B and data == 2:
-            key_code = 0x020B2
-        elif key_code == 0x020C and data == 2:
-            key_code = 0x020C2
-        code, value, scan_code = self.mouse_codes[key_code]
-
-        scan_event = self.create_event_object(
-            "Misc",
-            0x04,
-            scan_code,
-            timeval)
-        key_event = self.create_event_object(
-            "Key",
-            code,
-            value,
-            timeval)
-        return scan_event, key_event
-
-    def emulate_wheel(self, data, timeval, horizontal=False):
-        """Emulate rel values for the mouse wheel.
-
-        In evdev, a single click forwards of the mouse wheel is 1 and
-        a click back is -1. Windows uses 120 and -120. We floor divide
-        the Windows number by 120. This is fine for the digital scroll
-        wheels found on the vast majority of mice. It also works on
-        the analogue ball on the top of the Apple mouse.
-
-        What do the analogue scroll wheels found on 200 quid high end
-        gaming mice do? If the lowest unit is 120 then we are okay. If
-        they report changes of less than 120 units Windows, then this
-        might be an unacceptable loss of precision. Needless to say, I
-        don't have such a mouse to test one way or the other.
-
-        """
-        if horizontal:
-            code = 0x06
-        else:
-            code = 0x08
-
-        return self.create_event_object(
-            "Relative",
-            code,
-            data // 120,
-            timeval)
-
-    def emulate_abs(self, x_val, y_val, timeval):
-        """Emulate the absolute co-ordinates of the mouse cursor."""
-        x_event = self.create_event_object(
-            "Absolute",
-            0x00,
-            x_val,
-            timeval)
-        y_event = self.create_event_object(
-            "Absolute",
-            0x01,
-            y_val,
-            timeval)
-        return x_event, y_event
-
-    def create_event_object(self,
-                            event_type,
-                            code,
-                            value,
-                            timeval=None):
-        """Create an evdev style structure."""
-        if not timeval:
-            timeval = self.get_timeval()
-        try:
-            event_code = self.type_codes[event_type]
-        except KeyError:
-            raise UnknownEventType(
-                "We don't know what kind of event a %s is.",
-                event_type)
-        event = struct.pack(EVENT_FORMAT,
-                            timeval[0],
-                            timeval[1],
-                            event_code,
-                            code,
-                            value)
-        return event
-
-    def write_to_pipe(self, event_list):
-        """Send event back to the mouse object."""
-        self.pipe.send_bytes(b''.join(event_list))
 
 
 def mouse_process(pipe):
