@@ -1,163 +1,43 @@
 """Inputs - user input for humans.
 
-About
------
-
 Inputs aims to provide easy to use, cross-platform, user input device
 support for Python. I.e. keyboards, mice, gamepads, etc.
 
-It is still early days. Currently supported platforms are the
-Raspberry Pi, Linux. Windows and Mac OS X.
-
-BSD and Android should be supported soon. Optional Asyncio-based event
-loop support will be included eventually.
-
-Obviously high level graphical libraries such as PyGame and PyQT will
-provide user input support in a very friendly way. However, this
-module does not require your program to use any particular graphical
-toolkit, or even have a monitor at all.
-
-In the Embedded Linux or Raspberry Pi Internet of Things type
-situation, you may not even have an X-server installed or running.
-
-This module may also be useful where a computer needs to run a
-particular application full screen but you would want to listen out in
-the background for a particular set of user inputs, e.g. to bring up
-an admin panel in a digital signage setup.
-
-Note to Children
-----------------
-
-It is pretty easy to use any user input device library, including this
-one, to build a keylogger. Using this module to spy on your mum or
-teacher or sibling is not cool and may get you into trouble. So please
-do not do that. Make a game instead, games are cool.
-
-Quick Start
------------
-
-To access all the available input devices on the current system:
-
->>> from inputs import devices
->>> for device in devices:
-...     print(device)
-
-You can also access devices by type:
-
->>> devices.gamepads
->>> devices.keyboards
->>> devices.mice
->>> devices.other_devices
-
-Each device object has the obvious methods and properties that you
-expect, stop reading now and just get playing!
-
-If that is not high level enough, there are three basic functions that
-simply give you the latest event (key press, mouse movement/press or
-gamepad activity) from the first connected device in the category, for
-example:
-
->>> from inputs import get_gamepad
->>> while 1:
-...     event = get_gamepad()
-...     print(event.ev_type, event.code, event.state)
-
->>> from inputs import get_key
->>> while 1:
-...     event = get_gamepad()
-...     print(event.ev_type, event.code, event.state)
-
->>> from inputs import get_mouse
->>> while 1:
-...     event = get_gamepad()
-...     print(event.ev_type, event.code, event.state)
-
-Advanced documentation
-----------------------
-
-A keyboard is represented by the Keyboard class, a mouse by the Mouse
-class and a gamepad by the Gamepad class. These themselves are
-subclasses of InputDevice.
-
-The devices object is an instance of DeviceManager, as you can prove:
-
->>> from inputs import DeviceManager
->>> devices = DeviceManager()
-
-The DeviceManager is reponsible for finding input devices on the
-user's system and setting up InputDevice objects.
-
-The InputDevice objects emit instances of InputEvent. So from top
-down, the classes are arranged thus:
-
-DeviceManager > InputDevice > InputEvent
-
-So when you have a particular InputEvent instance, you can access its
-device and manager:
-
->>> event.device.manager
-
-The event object has a property called device and the device has a
-property called manager.
-
-As you can see, it is really very simple. The device manager has an
-attribute called codes which is giant dictionary of key, button and
-other codes.
-
-Using PyPi is superior but is yet another thing to learn for new
-users. Therefore, inputs is kept as one file to make it easy for
-people to include in their project.
-
-Gamepads
---------
-
-An approach often taken by PC games, especially open source games, is
-to assume that all gamepads are Microsoft Xbox 360 controllers and
-then users use software such as x360ce (on Windows) or xboxdrv (on
-Linux) to make other models of gamepad report Xbox 360 style button
-and joystick codes to the operating system.
-
-So for inputs the primary target device is the Microsoft Xbox 360
-Wired Controller and this has the best support. Another gamepad might
-just work but if not you can use xboxdrv or x360ce to configure it
-yourself.
-
-More testing and support for common gamepads will come in due course.
-
-On Linux and Raspberry Pi, the guide button (also known as home or
-mode or the fancy branded button) is exposed as BTN_MODE.
-
-On Windows, I haven't bothered to support it yet. It is not officially
-exposed to applications and using it unofficially requires every user
-to turn Game DVR off in the Windows Xbox app settings.
-
-Raspberry Pi Sense HAT
-----------------------
-
-The microcontroller on the Raspberry Pi Sense HAT presents the
-joystick to the operating system as a keyboard, so find it there under
-keyboards. If you worry about this, you are over-thinking things.
-
-Credits
--------
-
-Inputs is by Zeth, all mistakes are mine.
-
-Thanks to Dave Jones for stick.py which is not only the basis for
-Sense HAT stick support in this module but more importantly also
-taught me an easier way to parse the Evdev event format in Python.
-
-https://github.com/RPi-Distro/python-sense-hat/blob/master/sense_hat/stick.py
-https://github.com/waveform80/pisense/blob/master/pisense/stick.py
-
-Thanks to Andy (r4dian) and Jason R. Coombs whose existing (MIT
-licenced) Python examples for Xbox 360 controller support on Windows
-helped me understand xinput greatly. Xbox 360 controller support on
-Windows here is based on their work.
-https://github.com/r4dian/Xbox-360-Controller-for-Python
-http://pydoc.net/Python/jaraco.input/1.0.1/jaraco.input.win32.xinput/
+Currently supported platforms are the Raspberry Pi, Linux, Windows and
+Mac OS X.
 
 """
+
+# Copyright (c) 2016, Zeth
+# All rights reserved.
+#
+# BSD Licence
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+#     * Redistributions of source code must retain the above copyright
+#       notice, this list of conditions and the following disclaimer.
+#
+#     * Redistributions in binary form must reproduce the above copyright
+#       notice, this list of conditions and the following disclaimer in the
+#       documentation and/or other materials provided with the distribution.
+#
+#     * Neither the name of the copyright holder nor the
+#       names of its contributors may be used to endorse or promote products
+#       derived from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+# ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+# LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+# CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+# SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+# INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+# CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+# ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+# POSSIBILITY OF SUCH DAMAGE.
 
 from __future__ import print_function
 from __future__ import division
@@ -175,6 +55,8 @@ from itertools import count
 from operator import itemgetter
 from multiprocessing import Process, Pipe
 import ctypes
+
+__version__ = "0.1"
 
 WIN = True if platform.system() == 'Windows' else False
 MAC = True if platform.system() == 'Darwin' else False
