@@ -180,6 +180,7 @@ MAC = True if platform.system() == 'Darwin' else False
 NIX = True if platform.system() == 'Linux' else False
 
 if WIN:
+    import ctypes.wintypes
     DWORD = ctypes.wintypes.DWORD
     HANDLE = ctypes.wintypes.HANDLE
     WPARAM = ctypes.wintypes.WPARAM
