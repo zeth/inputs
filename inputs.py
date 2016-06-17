@@ -172,14 +172,15 @@ import time
 from warnings import warn
 from itertools import count
 from operator import itemgetter
-import ctypes
 from multiprocessing import Process, Pipe
+import ctypes
 
 WIN = True if platform.system() == 'Windows' else False
 MAC = True if platform.system() == 'Darwin' else False
 NIX = True if platform.system() == 'Linux' else False
 
 if WIN:
+    # pylint: disable=wrong-import-position
     import ctypes.wintypes
     DWORD = ctypes.wintypes.DWORD
     HANDLE = ctypes.wintypes.HANDLE
@@ -1516,6 +1517,14 @@ class BaseListener(object):
         """Install the input handler."""
         pass
 
+    def uninstall_handle_input(self):
+        """Un-install the input handler."""
+        pass
+
+    def __del__(self):
+        """Clean up when deleted."""
+        self.uninstall_handle_input()
+
     @staticmethod
     def get_timeval():
         """Get the time and make it into C style timeval."""
@@ -1616,17 +1625,11 @@ class KeyBoardEvdev(object):
     """Loosely emulate Evdev keyboard behaviour on Windows.  Listen (hook
     in Windows terminology) for key events then buffer them in a pipe.
     """
-    def __init__(self, pipe, debug=False):
+    def __init__(self, pipe):
         self.pipe = pipe
-        self.debug = debug
         self.hooked = None
         self.pointer = None
-        if self.install_handle_key_input():
-            if debug:
-                print(
-                    "Installed keyboard detection, type to see the key codes. "
-                    "Press ESC to quit")
-
+        self.install_handle_input()
         self.type_codes = {
             "Sync": 0x00,
             "Key": 0x01,
@@ -1645,9 +1648,9 @@ class KeyBoardEvdev(object):
                                    WPARAM,
                                    LPARAM,
                                    ctypes.POINTER(KBDLLHookStruct))
-        return cmpfunc(self.handle_key_input)
+        return cmpfunc(self.handle_input)
 
-    def install_handle_key_input(self):
+    def install_handle_input(self):
         """Install the hook."""
         self.pointer = self.get_fptr()
 
@@ -1663,30 +1666,27 @@ class KeyBoardEvdev(object):
 
     def __del__(self):
         """Clean up when deleted."""
-        self.uninstall_handle_key_input()
+        self.uninstall_handle_input()
 
-    def uninstall_handle_key_input(self):
+    def uninstall_handle_input(self):
         """Remove the hook."""
         if self.hooked is None:
             return
         ctypes.windll.user32.UnhookWindowsHookEx(self.hooked)
         self.hooked = None
 
-    def handle_key_input(self, ncode, wparam, lparam):
+    def handle_input(self, ncode, wparam, lparam):
         """Process the key input."""
         value = WIN_KEYBOARD_CODES[wparam]
         scan_code = lparam.contents.scan_code
         vk_code = lparam.contents.vk_code
-        if self.debug and vk_code == 27:
-            self.uninstall_handle_key_input()
-            sys.exit(0)
         self.emulate_key(vk_code, scan_code, value)
 
         return ctypes.windll.user32.CallNextHookEx(
             self.hooked, ncode, wparam, lparam)
 
     @staticmethod
-    def __get_timeval():
+    def get_timeval():
         """Get the time and make it into C style timeval."""
         frac, whole = math.modf(time.time())
         microseconds = math.floor(frac * 1000000)
@@ -1695,36 +1695,36 @@ class KeyBoardEvdev(object):
 
     def emulate_key(self, vk_code, scan_code, value):
         """Emulate a single keypress."""
-        timeval = self.__get_timeval()
-        self.__write_to_pipe([
+        timeval = self.get_timeval()
+        self.write_to_pipe([
             # Raw Scan Code first
-            self.__create_event_object(
+            self.create_event_object(
                 "Misc",
                 0x04,
                 scan_code,
                 timeval),
             # The main key event
-            self.__create_event_object(
+            self.create_event_object(
                 "Key",
                 vk_code,
                 value,
                 timeval),
             # End with a sync marker
-            self.__create_event_object(
+            self.create_event_object(
                 "Sync",
                 0,
                 0,
                 timeval)
         ])
 
-    def __create_event_object(self,
-                              event_type,
-                              code,
-                              value,
-                              timeval=None):
+    def create_event_object(self,
+                            event_type,
+                            code,
+                            value,
+                            timeval=None):
         """Create an evdev style structure."""
         if not timeval:
-            timeval = self.__get_timeval()
+            timeval = self.get_timeval()
         try:
             event_code = self.type_codes[event_type]
         except KeyError:
@@ -1739,7 +1739,7 @@ class KeyBoardEvdev(object):
                             value)
         return event
 
-    def __write_to_pipe(self, event_list):
+    def write_to_pipe(self, event_list):
         """Send event back to the keyboard object."""
         self.pipe.send_bytes(b''.join(event_list))
 
@@ -1754,17 +1754,12 @@ class MouseEvdev(object):
     """Loosely emulate Evdev mouse behaviour on Windows.  Listen (hook
     in Windows terminology) for key events then buffer them in a pipe.
     """
-    def __init__(self, pipe, debug=False):
+    def __init__(self, pipe):
         self.pipe = pipe
-        self.debug = debug
         self.hooked = None
         self.pointer = None
         self.mouse_codes = WIN_MOUSE_CODES
-        if self.install_handle_key_input():
-            if debug:
-                print(
-                    "Installed mouse detection, type to see the key codes. "
-                    "Press ESC to quit")
+        self.install_handle_input()
 
         self.type_codes = {
             "Sync": 0x00,
@@ -1786,9 +1781,9 @@ class MouseEvdev(object):
                                    WPARAM,
                                    LPARAM,
                                    ctypes.POINTER(MSLLHookStruct))
-        return cmpfunc(self.handle_key_input)
+        return cmpfunc(self.handle_input)
 
-    def install_handle_key_input(self):
+    def install_handle_input(self):
         """Install the hook."""
         self.pointer = self.get_fptr()
 
@@ -1804,16 +1799,16 @@ class MouseEvdev(object):
 
     def __del__(self):
         """Clean up when deleted."""
-        self.uninstall_handle_key_input()
+        self.uninstall_handle_input()
 
-    def uninstall_handle_key_input(self):
+    def uninstall_handle_input(self):
         """Remove the hook."""
         if self.hooked is None:
             return
         ctypes.windll.user32.UnhookWindowsHookEx(self.hooked)
         self.hooked = None
 
-    def handle_key_input(self, ncode, wparam, lparam):
+    def handle_input(self, ncode, wparam, lparam):
         """Process the key input."""
         x_pos = lparam.contents.x_pos
         y_pos = lparam.contents.y_pos
@@ -1837,7 +1832,7 @@ class MouseEvdev(object):
             self.hooked, ncode, wparam, lparam)
 
     @staticmethod
-    def __get_timeval():
+    def get_timeval():
         """Get the time and make it into C style timeval."""
         frac, whole = math.modf(time.time())
         microseconds = math.floor(frac * 1000000)
@@ -1871,7 +1866,7 @@ class MouseEvdev(object):
         # Once again ignore Windows' relative time (since system
         # startup) and use the absolute time (since epoch i.e. 1st Jan
         # 1970).
-        timeval = self.__get_timeval()
+        timeval = self.get_timeval()
 
         events = []
 
@@ -1900,14 +1895,14 @@ class MouseEvdev(object):
 
         # End with a sync marker
         events.append(
-            self.__create_event_object(
+            self.create_event_object(
                 "Sync",
                 0,
                 0,
                 timeval))
 
         # We are done
-        self.__write_to_pipe(events)
+        self.write_to_pipe(events)
 
     def emulate_press(self, key_code, data, timeval):
         """Emulate a button press.
@@ -1931,12 +1926,12 @@ class MouseEvdev(object):
             key_code = 0x020C2
         code, value, scan_code = self.mouse_codes[key_code]
 
-        scan_event = self.__create_event_object(
+        scan_event = self.create_event_object(
             "Misc",
             0x04,
             scan_code,
             timeval)
-        key_event = self.__create_event_object(
+        key_event = self.create_event_object(
             "Key",
             code,
             value,
@@ -1964,7 +1959,7 @@ class MouseEvdev(object):
         else:
             code = 0x08
 
-        return self.__create_event_object(
+        return self.create_event_object(
             "Relative",
             code,
             data // 120,
@@ -1972,26 +1967,26 @@ class MouseEvdev(object):
 
     def emulate_abs(self, x_val, y_val, timeval):
         """Emulate the absolute co-ordinates of the mouse cursor."""
-        x_event = self.__create_event_object(
+        x_event = self.create_event_object(
             "Absolute",
             0x00,
             x_val,
             timeval)
-        y_event = self.__create_event_object(
+        y_event = self.create_event_object(
             "Absolute",
             0x01,
             y_val,
             timeval)
         return x_event, y_event
 
-    def __create_event_object(self,
-                              event_type,
-                              code,
-                              value,
-                              timeval=None):
+    def create_event_object(self,
+                            event_type,
+                            code,
+                            value,
+                            timeval=None):
         """Create an evdev style structure."""
         if not timeval:
-            timeval = self.__get_timeval()
+            timeval = self.get_timeval()
         try:
             event_code = self.type_codes[event_type]
         except KeyError:
@@ -2006,7 +2001,7 @@ class MouseEvdev(object):
                             value)
         return event
 
-    def __write_to_pipe(self, event_list):
+    def write_to_pipe(self, event_list):
         """Send event back to the mouse object."""
         self.pipe.send_bytes(b''.join(event_list))
 
@@ -2075,14 +2070,13 @@ def mac_mouse_process(pipe):
         def __init__(self, pipe):
             super(MacMouseEvdev, self).__init__(pipe)
             self.codes = dict(MAC_EVENT_CODES)
-            self.install_handle_key_input()
 
-        def install_handle_key_input(self):
+        def install_handle_input(self):
             """Install the hook."""
             self.app = NSApplication.sharedApplication()
             # pylint: disable=no-member
             delegate = MacMouseSetup.alloc().init_with_handler(
-                self.handle_mouse_input)
+                self.handle_input)
             NSApp().setDelegate_(delegate)
             AppHelper.runEventLoop()
 
@@ -2090,7 +2084,7 @@ def mac_mouse_process(pipe):
             """Stop the listener on deletion."""
             AppHelper.stopEventLoop()
 
-        def handle_mouse_input(self, event):
+        def handle_input(self, event):
             """Process the mouse event."""
 
             timeval = self.get_timeval()
@@ -2519,11 +2513,12 @@ class GamePad(InputDevice):
         seconds = math.floor(whole)
         return seconds, microseconds
 
-    def __create_event_object(self,
-                              event_type,
-                              code,
-                              value,
-                              timeval=None):
+    def create_event_object(self,
+                            event_type,
+                            code,
+                            value,
+                            timeval=None):
+        """Create an evdev style object."""
         if not timeval:
             timeval = self.__get_timeval()
         try:
@@ -2551,7 +2546,7 @@ class GamePad(InputDevice):
         for event in event_list:
             self._character_device.write(event)
         # Add a sync marker
-        sync = self.__create_event_object("Sync", 0, 0, timeval)
+        sync = self.create_event_object("Sync", 0, 0, timeval)
         self._character_device.write(sync)
         # Put the stream back to its original position
         self._character_device.seek(pos)
@@ -2614,7 +2609,7 @@ class GamePad(InputDevice):
         events = []
         for axis in axis_changes:
             code, value = self.__map_axis(axis)
-            event = self.__create_event_object(
+            event = self.create_event_object(
                 "Absolute",
                 code,
                 value,
@@ -2627,7 +2622,7 @@ class GamePad(InputDevice):
         events = []
         for button in changed_buttons:
             code, value, ev_type = self.__map_button(button)
-            event = self.__create_event_object(
+            event = self.create_event_object(
                 ev_type,
                 code,
                 value,
