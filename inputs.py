@@ -1650,7 +1650,7 @@ class BaseListener(object):
         return x_event, y_event
 
 
-class KeyBoardEvdev(BaseListener):
+class WindowsKeyboardListener(BaseListener):
     """Loosely emulate Evdev keyboard behaviour on Windows.  Listen (hook
     in Windows terminology) for key events then buffer them in a pipe.
     """
@@ -1658,7 +1658,7 @@ class KeyBoardEvdev(BaseListener):
         self.pipe = pipe
         self.hooked = None
         self.pointer = None
-        super(KeyBoardEvdev, self).__init__(pipe)
+        super(WindowsKeyboardListener, self).__init__(pipe)
 
     @staticmethod
     def listen():
@@ -1721,11 +1721,11 @@ class KeyBoardEvdev(BaseListener):
 
 def keyboard_process(pipe):
     """Single subprocess for reading keyboard events on Windows."""
-    keyboard = KeyBoardEvdev(pipe)
+    keyboard = WindowsKeyboardListener(pipe)
     keyboard.listen()
 
 
-class MouseEvdev(BaseListener):
+class WindowsMouseListener(BaseListener):
     """Loosely emulate Evdev mouse behaviour on Windows.  Listen (hook
     in Windows terminology) for key events then buffer them in a pipe.
     """
@@ -1734,7 +1734,7 @@ class MouseEvdev(BaseListener):
         self.hooked = None
         self.pointer = None
         self.mouse_codes = WIN_MOUSE_CODES
-        super(MouseEvdev, self).__init__(pipe)
+        super(WindowsMouseListener, self).__init__(pipe)
 
     @staticmethod
     def listen():
@@ -1868,7 +1868,7 @@ class MouseEvdev(BaseListener):
 
 def mouse_process(pipe):
     """Single subprocess for reading mouse events on Windows."""
-    mouse = MouseEvdev(pipe)
+    mouse = WindowsMouseListener(pipe)
     mouse.listen()
 
 
@@ -1892,10 +1892,7 @@ def mac_mouse_process(pipe):
     from PyObjCTools import AppHelper
 
     class MacMouseSetup(NSObject):
-        """Loosely emulate Evdev mouse behaviour on the Mac Windows.  Listen
-        for key events then buffer them in a pipe.
-
-        """
+        """Setup the handler."""
         def init_with_handler(self, handler):
             """
             Init method that receives the write end of the pipe.
@@ -1923,12 +1920,12 @@ def mac_mouse_process(pipe):
             NSEvent.addGlobalMonitorForEventsMatchingMask_handler_(
                 mask, self.handler)
 
-    class MacMouseEvdev(BaseListener):
-        """Loosely emulate Evdev mouse behaviour on the Mac Windows.
+    class MacMouseListener(BaseListener):
+        """Loosely emulate Evdev mouse behaviour on the Macs.
         Listen for key events then buffer them in a pipe.
         """
         def __init__(self, pipe):
-            super(MacMouseEvdev, self).__init__(pipe)
+            super(MacMouseListener, self).__init__(pipe)
             self.codes = dict(MAC_EVENT_CODES)
 
         def install_handle_input(self):
@@ -2014,7 +2011,7 @@ def mac_mouse_process(pipe):
             # We are done
             self.write_to_pipe(events)
 
-    mouse = MacMouseEvdev(pipe)
+    mouse = MacMouseListener(pipe)
 
 
 def mac_keyboard_process(pipe):
@@ -2054,12 +2051,12 @@ def mac_keyboard_process(pipe):
             NSEvent.addGlobalMonitorForEventsMatchingMask_handler_(
                 mask, self.handler)
 
-    class MacKeyboardEvdev(BaseListener):
-        """Loosely emulate Evdev mouse behaviour on the Mac Windows.
+    class MacKeyboardListener(BaseListener):
+        """Loosely emulate Evdev keyboard behaviour on the Mac.
         Listen for key events then buffer them in a pipe.
         """
         def __init__(self, pipe):
-            super(MacKeyboardEvdev, self).__init__(pipe)
+            super(MacKeyboardListener, self).__init__(pipe)
             self.codes = dict(MAC_EVENT_CODES)
 
         def install_handle_input(self):
@@ -2109,7 +2106,7 @@ def mac_keyboard_process(pipe):
             # We are done
             self.write_to_pipe(events)
 
-    keyboard = MacKeyboardEvdev(pipe)
+    keyboard = MacKeyboardListener(pipe)
 
 
 class InputDevice(object):
