@@ -33,9 +33,10 @@ To get started quickly, just use the following::
 
 For other examples, keep reading.
 
-There are no dependencies on Raspberry Pi, Linux or Windows. On the
-Mac, inputs needs PyObjC which Apple installs by default in the system
-Python. To get PyObjC for your own user-installed Python go to:
+Inputs is in pure Python and there are no dependencies on Raspberry
+Pi, Linux or Windows. On the Mac, inputs needs PyObjC which Apple
+installs by default in the system Python. To get PyObjC for your own
+user-installed Python go to:
 
     http://pythonhosted.org/pyobjc/
 
