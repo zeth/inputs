@@ -1650,7 +1650,7 @@ class BaseListener(object):
         return x_event, y_event
 
 
-class KeyBoardEvdev(object):
+class KeyBoardEvdev(BaseListener):
     """Loosely emulate Evdev keyboard behaviour on Windows.  Listen (hook
     in Windows terminology) for key events then buffer them in a pipe.
     """
@@ -1658,12 +1658,7 @@ class KeyBoardEvdev(object):
         self.pipe = pipe
         self.hooked = None
         self.pointer = None
-        self.install_handle_input()
-        self.type_codes = {
-            "Sync": 0x00,
-            "Key": 0x01,
-            "Misc": 0x04
-        }
+        super(KeyBoardEvdev, self).__init__(pipe)
 
     @staticmethod
     def listen():
@@ -1693,10 +1688,6 @@ class KeyBoardEvdev(object):
             return False
         return True
 
-    def __del__(self):
-        """Clean up when deleted."""
-        self.uninstall_handle_input()
-
     def uninstall_handle_input(self):
         """Remove the hook."""
         if self.hooked is None:
@@ -1709,68 +1700,23 @@ class KeyBoardEvdev(object):
         value = WIN_KEYBOARD_CODES[wparam]
         scan_code = lparam.contents.scan_code
         vk_code = lparam.contents.vk_code
-        self.emulate_key(vk_code, scan_code, value)
+        timeval = self.get_timeval()
+
+        events = []
+        # Add key event
+        scan_key, key_event = self.emulate_press(
+            vk_code, scan_code, value, timeval)
+        events.append(scan_key)
+        events.append(key_event)
+
+        # End with a sync marker
+        events.append(self.sync_marker(timeval))
+
+        # We are done
+        self.write_to_pipe(events)
 
         return ctypes.windll.user32.CallNextHookEx(
             self.hooked, ncode, wparam, lparam)
-
-    @staticmethod
-    def get_timeval():
-        """Get the time and make it into C style timeval."""
-        frac, whole = math.modf(time.time())
-        microseconds = math.floor(frac * 1000000)
-        seconds = math.floor(whole)
-        return seconds, microseconds
-
-    def emulate_key(self, vk_code, scan_code, value):
-        """Emulate a single keypress."""
-        timeval = self.get_timeval()
-        self.write_to_pipe([
-            # Raw Scan Code first
-            self.create_event_object(
-                "Misc",
-                0x04,
-                scan_code,
-                timeval),
-            # The main key event
-            self.create_event_object(
-                "Key",
-                vk_code,
-                value,
-                timeval),
-            # End with a sync marker
-            self.create_event_object(
-                "Sync",
-                0,
-                0,
-                timeval)
-        ])
-
-    def create_event_object(self,
-                            event_type,
-                            code,
-                            value,
-                            timeval=None):
-        """Create an evdev style structure."""
-        if not timeval:
-            timeval = self.get_timeval()
-        try:
-            event_code = self.type_codes[event_type]
-        except KeyError:
-            raise UnknownEventType(
-                "We don't know what kind of event a %s is.",
-                event_type)
-        event = struct.pack(EVENT_FORMAT,
-                            timeval[0],
-                            timeval[1],
-                            event_code,
-                            code,
-                            value)
-        return event
-
-    def write_to_pipe(self, event_list):
-        """Send event back to the keyboard object."""
-        self.pipe.send_bytes(b''.join(event_list))
 
 
 def keyboard_process(pipe):
@@ -1914,12 +1860,7 @@ class MouseEvdev(BaseListener):
         events.append(y_event)
 
         # End with a sync marker
-        events.append(
-            self.create_event_object(
-                "Sync",
-                0,
-                0,
-                timeval))
+        events.append(self.sync_marker(timeval))
 
         # We are done
         self.write_to_pipe(events)
@@ -2893,7 +2834,6 @@ class DeviceManager(object):
         if WIN and evtype == 'Key':
             # If we can map the code to a common one then do it
             try:
-                print(code, self.codes['wincodes'][code])
                 code = self.codes['wincodes'][code]
             except KeyError:
                 pass
