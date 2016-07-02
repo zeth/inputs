@@ -99,7 +99,9 @@ EVENT_SIZE = struct.calcsize(EVENT_FORMAT)
 
 SPECIAL_DEVICES = (
     ("Raspberry Pi Sense HAT Joystick",
-     "/dev/input/by-id/gpio-Raspberry_Pi_Sense_HAT_Joystick-event-kbd"),)
+     "/dev/input/by-id/gpio-Raspberry_Pi_Sense_HAT_Joystick-event-kbd"),
+    ("Nintendo Wii Remote",
+     "/dev/input/by-id/bluetooth-Nintendo_Wii_Remote-event-joystick"),)
 
 XINPUT_MAPPING = (
     (1, 0x11),
