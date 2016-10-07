@@ -1363,6 +1363,11 @@ class UnknownEventCode(IndexError):
     pass
 
 
+class NoDataError(RuntimeError):
+    """We have no data available but the user wants to read non blocking"""
+    pass
+
+
 class InputEvent(object):
     """A user event."""
     # pylint: disable=too-few-public-methods
@@ -2000,6 +2005,8 @@ class InputDevice(object):
     def __init__(self, manager, device_path,
                  char_path_override=None,
                  read_size=1):
+        self.blocking = True
+
         self.read_size = read_size
         self.manager = manager
         self._device_path = device_path
@@ -2098,7 +2105,8 @@ class InputDevice(object):
 
         return InputEvent(self, eventinfo)
 
-    def read(self):
+    def read(self, blocking=True):
+        self.blocking = blocking
         """Read the next input event."""
         return next(iter(self))
 
@@ -2195,6 +2203,9 @@ class GamePad(InputDevice):
             event = self._do_iter()
             if event:
                 yield event
+            else:
+                if not self.blocking:
+                    raise NoDataError
 
     def __check_state(self):
         """On Windows, check the state and fill the event character device."""
@@ -2706,10 +2717,10 @@ def get_mouse():
     return mouse.read()
 
 
-def get_gamepad():
+def get_gamepad(blocking=True):
     """Get a single action from a gamepad."""
     try:
         gamepad = devices.gamepads[0]
     except IndexError:
         raise UnpluggedError("No gamepad found.")
-    return gamepad.read()
+    return gamepad.read(blocking=blocking)
