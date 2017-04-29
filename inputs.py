@@ -2495,20 +2495,26 @@ class DeviceManager(object):
                  "not be parsed: %s" % device_path, RuntimeWarning)
             return
 
+        def is_duplicate(device_list, device):
+            names = [d.get_char_name() for d in device_list]
+            return device.get_char_name() in names 
+
         if device_type == 'kbd':
-            self.keyboards.append(Keyboard(self, device_path,
-                                           char_path_override))
+            device = Keyboard(self, device_path, char_path_override)
+            if not is_duplicate(self.keyboards, device):
+                self.keyboards.append(device)
         elif device_type == 'mouse':
-            self.mice.append(Mouse(self, device_path,
-                                   char_path_override))
+            device = Mouse(self, device_path, char_path_override)
+            if not is_duplicate(self.mice, device):
+                self.mice.append(device)
         elif device_type == 'joystick':
-            self.gamepads.append(GamePad(self,
-                                         device_path,
-                                         char_path_override))
+            device = GamePad(self, device_path, char_path_override)
+            if not is_duplicate(self.gamepads, device):
+                self.gamepads.append(device)
         else:
-            self.other_devices.append(OtherDevice(self,
-                                                  device_path,
-                                                  char_path_override))
+            device = OtherDevice(self, device_path, char_path_override)
+            if not is_duplicate(self.other_devices, device):
+                self.other_devices.append(device)        
 
     def _find_xinput(self):
         """Find most recent xinput library."""
@@ -2615,9 +2621,8 @@ class DeviceManager(object):
 
     def _find_devices(self):
         """Find available devices."""
-        length = self._find_by_id()
-        if not length:
-            self._find_by_path()
+        self._find_by_id()
+        self._find_by_path()
         self._find_special()
 
     def _find_by_path(self):
