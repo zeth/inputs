@@ -8,7 +8,7 @@ Mac OS X.
 
 """
 
-# Copyright (c) 2016, Zeth
+# Copyright (c) 2016, 2018: Zeth
 # All rights reserved.
 #
 # BSD Licence
@@ -56,7 +56,7 @@ from operator import itemgetter
 from multiprocessing import Process, Pipe
 import ctypes
 
-__version__ = "0.1"
+__version__ = "0.2"
 
 WIN = True if platform.system() == 'Windows' else False
 MAC = True if platform.system() == 'Darwin' else False
