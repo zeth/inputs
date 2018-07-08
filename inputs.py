@@ -104,7 +104,7 @@ SPECIAL_DEVICES = (
     ("Nintendo Wii Remote",
      "/dev/input/by-id/bluetooth-Nintendo_Wii_Remote-event-joystick"),
     ("FT5406 memory based driver",
-     "/dev/input/by-id/Raspberry_Pi_Touchscreen_Display-event-mouse"),
+     "/dev/input/by-id/gpio-Raspberry_Pi_Touchscreen_Display-event-mouse"),
 )
 
 XINPUT_MAPPING = (
