@@ -93,6 +93,7 @@ def iter_unpack(raw):
     else:
         return struct.iter_unpack(EVENT_FORMAT, raw)
 
+
 # long, long, unsigned short, unsigned short, int
 EVENT_FORMAT = str('llHHi')
 EVENT_SIZE = struct.calcsize(EVENT_FORMAT)
@@ -2459,6 +2460,7 @@ class DeviceManager(object):
 
     def __init__(self):
         self.codes = {key: dict(value) for key, value in EVENT_MAP}
+        self._raw = []
         self.keyboards = []
         self.mice = []
         self.gamepads = []
@@ -2488,6 +2490,8 @@ class DeviceManager(object):
 
     def _parse_device_path(self, device_path, char_path_override=None):
         """Parse each device and add to the approriate list."""
+
+        # 1. Make sure that we can parse the device path.
         try:
             device_type = device_path.rsplit('-', 1)[1]
         except IndexError:
@@ -2495,6 +2499,13 @@ class DeviceManager(object):
                  "not be parsed: %s" % device_path, RuntimeWarning)
             return
 
+        # 2. Make sure each device is only added once.
+        realpath = os.path.realpath(device_path)
+        if realpath in self._raw:
+            return
+        self._raw.append(realpath)
+
+        # 3. All seems good, append the device to the relevant list.
         if device_type == 'kbd':
             self.keyboards.append(Keyboard(self, device_path,
                                            char_path_override))
@@ -2615,25 +2626,15 @@ class DeviceManager(object):
 
     def _find_devices(self):
         """Find available devices."""
-        length = self._find_by_id()
-        if not length:
-            self._find_by_path()
+        self._find_by('id')
+        self._find_by('path')
         self._find_special()
 
-    def _find_by_path(self):
-        """Find devices by path."""
-        by_path = glob.glob('/dev/input/by-path/*-event-*')
+    def _find_by(self, key):
+        """Find devices."""
+        by_path = glob.glob('/dev/input/by-{key}/*-event-*'.format(key=key))
         for device_path in by_path:
             self._parse_device_path(device_path)
-
-    def _find_by_id(self):
-        """Find devices by id."""
-        # Start with everything given an id
-        # I.e. those with fully correct kernel drivers
-        by_id = glob.glob('/dev/input/by-id/*-event-*')
-        for device_path in by_id:
-            self._parse_device_path(device_path)
-        return len(by_id)
 
     def _get_char_names(self):
         """Get a list of already found devices."""
