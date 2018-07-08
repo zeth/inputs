@@ -102,7 +102,10 @@ SPECIAL_DEVICES = (
     ("Raspberry Pi Sense HAT Joystick",
      "/dev/input/by-id/gpio-Raspberry_Pi_Sense_HAT_Joystick-event-kbd"),
     ("Nintendo Wii Remote",
-     "/dev/input/by-id/bluetooth-Nintendo_Wii_Remote-event-joystick"),)
+     "/dev/input/by-id/bluetooth-Nintendo_Wii_Remote-event-joystick"),
+    ("FT5406 memory based driver",
+     "/dev/input/by-id/Raspberry_Pi_Touchscreen_Display-event-mouse"),
+)
 
 XINPUT_MAPPING = (
     (1, 0x11),
