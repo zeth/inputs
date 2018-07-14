@@ -86,11 +86,14 @@ def chunks(raw):
         yield struct.unpack(EVENT_FORMAT, raw[i:i+24])
 
 
-def iter_unpack(raw):
-    """Yield successive 24-sized chunks from message."""
-    if OLD:
+if OLD:
+    def iter_unpack(raw):
+        """Yield successive 24-sized chunks from message."""
         return chunks(raw)
-    return struct.iter_unpack(EVENT_FORMAT, raw)
+else:
+    def iter_unpack(raw):
+        """Yield successive 24-sized chunks from message."""
+        return struct.iter_unpack(EVENT_FORMAT, raw)
 
 
 # long, long, unsigned short, unsigned short, int
