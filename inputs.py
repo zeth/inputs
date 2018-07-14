@@ -2579,7 +2579,6 @@ class DeviceManager(object):
                 device_number, ctypes.byref(state))
             if res == XINPUT_ERROR_SUCCESS:
                 # We found a gamepad
-                print("we found a gamepad.")
                 device_path = (
                     "/dev/input/by_id/" +
                     "usb-Microsoft_Corporation_Controller_%s-event-joystick"
