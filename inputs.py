@@ -90,8 +90,7 @@ def iter_unpack(raw):
     """Yield successive 24-sized chunks from message."""
     if OLD:
         return chunks(raw)
-    else:
-        return struct.iter_unpack(EVENT_FORMAT, raw)
+    return struct.iter_unpack(EVENT_FORMAT, raw)
 
 
 # long, long, unsigned short, unsigned short, int
@@ -2477,6 +2476,11 @@ class DeviceManager(object):
                 'otherhid': 0,
                 'unknown': 0
             }
+        self._post_init()
+
+    def _post_init(self):
+        """Call the find devices method for the relevant platform."""
+        if WIN:
             self._find_devices_win()
         elif MAC:
             self._find_devices_mac()
