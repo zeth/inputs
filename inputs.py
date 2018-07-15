@@ -2568,11 +2568,25 @@ class DeviceManager(object):
         """Find devices on Mac."""
         self.keyboards.append(Keyboard(
             self,
-            "/dev/input/by-id/usb-A_Nice_Keyboard-event-kbd"))
+            "/dev/input/by-id/usb-AppKit_Keyboard-event-kbd"))
+
+        if self._has_quartz_mouse():
+            self.mice.append(Mouse(
+                self,
+                "/dev/input/by-id/usb-Quartz_Mouse-event-mouse"))
 
         self.mice.append(Mouse(
             self,
-            "/dev/input/by-id/usb-A_Nice_Mouse_called_Arthur-event-mouse"))
+            "/dev/input/by-id/usb-AppKit_Mouse-event-mouse"))
+
+    def _has_quartz_mouse():
+        """Detect Quartz Mouse."""
+        try:
+            import Quartz
+        except ImportError:
+            return False
+        else:
+            return True
 
     def _detect_gamepads(self):
         """Find gamepads."""
