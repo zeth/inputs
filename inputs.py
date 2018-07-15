@@ -1781,9 +1781,11 @@ def mac_mouse_process(pipe):
                        NSMouseExitedMask, NSScrollWheelMask,
                        NSOtherMouseDownMask, NSOtherMouseUpMask)
     from PyObjCTools import AppHelper
+    import objc
 
     class MacMouseSetup(NSObject):
         """Setup the handler."""
+        @objc.python_method
         def init_with_handler(self, handler):
             """
             Init method that receives the write end of the pipe.
@@ -1917,9 +1919,11 @@ def mac_keyboard_process(pipe):
     from Cocoa import (NSEvent, NSKeyDownMask, NSKeyUpMask,
                        NSFlagsChangedMask)
     from PyObjCTools import AppHelper
+    import objc
 
     class MacKeyboardSetup(NSObject):
         """Setup the handler."""
+        @objc.python_method
         def init_with_handler(self, handler):
             """
             Init method that receives the write end of the pipe.
