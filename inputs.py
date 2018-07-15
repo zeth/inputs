@@ -2579,7 +2579,7 @@ class DeviceManager(object):
             self,
             "/dev/input/by-id/usb-AppKit_Mouse-event-mouse"))
 
-    def _has_quartz_mouse():
+    def _has_quartz_mouse(self):
         """Detect Quartz Mouse."""
         try:
             import Quartz
