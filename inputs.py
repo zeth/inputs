@@ -79,6 +79,17 @@ else:
 
 OLD = sys.version_info < (3, 4)
 
+# Standard event format for most devices.
+# long, long, unsigned short, unsigned short, int
+EVENT_FORMAT = str('llHHi')
+
+# Extended format for Apple's Mighty Mouse/Magic Mouse.
+# long, long, unsigned short, unsigned short, float
+QUARTZ_EVENT_FORMAT = str('llHHf')
+
+
+EVENT_SIZE = struct.calcsize(EVENT_FORMAT)
+
 
 def chunks(raw):
     """Yield successive 24-sized chunks from raw."""
@@ -91,14 +102,10 @@ if OLD:
         """Yield successive 24-sized chunks from message."""
         return chunks(raw)
 else:
-    def iter_unpack(raw):
+    def iter_unpack(raw, event_format=EVENT_FORMAT):
         """Yield successive 24-sized chunks from message."""
-        return struct.iter_unpack(EVENT_FORMAT, raw)
+        return struct.iter_unpack(event_format, raw)
 
-
-# long, long, unsigned short, unsigned short, int
-EVENT_FORMAT = str('llHHi')
-EVENT_SIZE = struct.calcsize(EVENT_FORMAT)
 
 SPECIAL_DEVICES = (
     ("Raspberry Pi Sense HAT Joystick",
@@ -1059,13 +1066,15 @@ WINCODES = (
 )
 
 MAC_EVENT_CODES = (
-    (1, ("Key", 0x110, 1, 589825)),    # NSLeftMouseDown
-    (2, ("Key", 0x110, 0, 589825)),    # NSLeftMouseUp
-    (3, ("Key", 0x111, 1, 589826)),    # NSRightMouseDown
-    (4, ("Key", 0x111, 0, 589826)),    # NSRightMouseUp
-    (5, (None, 0, 0, 0)),    # NSMouseMoved
-    (6, (None, 0, 0, 0)),    # NSLeftMouseDragged
-    (7, (None, 0, 0, 0)),    # NSRightMouseDragged
+    (1, ("Key", 0x110, 1, 589825)),    # NSLeftMouseDown Quartz.kCGEventLeftMouseDown
+    (2, ("Key", 0x110, 0, 589825)),    # NSLeftMouseUp Quartz.kCGEventLeftMouseUp
+    (3, ("Key", 0x111, 1, 589826)),    # NSRightMouseDown Quartz.kCGEventRightMouseDown
+    # NSRightMouseUp Quartz.kCGEventRightMouseUp
+    (4, ("Key", 0x111, 0, 589826)),
+    (5, (None, 0, 0, 0)),    # NSMouseMoved Quartz.kCGEventMouseMoved
+    (6, (None, 0, 0, 0)),  # NSLeftMouseDragged Quartz.kCGEventLeftMouseDragged
+    # NSRightMouseDragged Quartz.kCGEventRightMouseDragged
+    (7, (None, 0, 0, 0)),
     (8, (None, 0, 0, 0)),    # NSMouseEntered
     (9, (None, 0, 0, 0)),    # NSMouseExited
     (10, (None, 0, 0, 0)),   # NSKeyDown
@@ -1076,14 +1085,14 @@ MAC_EVENT_CODES = (
     (15, (None, 0, 0, 0)),   # NSApplicationDefined
     (16, (None, 0, 0, 0)),   # NSPeriodic
     (17, (None, 0, 0, 0)),   # NSCursorUpdate
-    (22, (None, 0, 0, 0)),   # NSScrollWheel
-    (23, (None, 0, 0, 0)),   # NSTabletPoint
-    (24, (None, 0, 0, 0)),   # NSTabletProximity
-    (25, (None, 0, 0, 0)),   # NSOtherMouseDown
+    (22, (None, 0, 0, 0)),   # NSScrollWheel Quartz.kCGEventScrollWheel
+    (23, (None, 0, 0, 0)),   # NSTabletPoint Quartz.kCGEventTabletPointer
+    (24, (None, 0, 0, 0)),   # NSTabletProximity Quartz.kCGEventTabletProximity
+    (25, (None, 0, 0, 0)),   # NSOtherMouseDown Quartz.kCGEventOtherMouseDown
     (25.2, ("Key", 0x112, 1, 589827)),   # BTN_MIDDLE
     (25.3, ("Key", 0x113, 1, 589828)),   # BTN_SIDE
     (25.4, ("Key", 0x114, 1, 589829)),   # BTN_EXTRA
-    (26, (None, 0, 0, 0)),   # NSOtherMouseUp
+    (26, (None, 0, 0, 0)),   # NSOtherMouseUp Quartz.kCGEventOtherMouseUp
     (26.2, ("Key", 0x112, 0, 589827)),   # BTN_MIDDLE
     (26.3, ("Key", 0x113, 0, 589828)),   # BTN_SIDE
     (26.4, ("Key", 0x114, 0, 589829)),   # BTN_EXTRA
@@ -1094,6 +1103,7 @@ MAC_EVENT_CODES = (
     (18, (None, 0, 0, 0)),   # NSEventTypeRotate
     (19, (None, 0, 0, 0)),   # NSEventTypeBeginGesture
     (20, (None, 0, 0, 0)),   # NSEventTypeEndGesture
+    (27, (None, 0, 0, 0)),   # Quartz.kCGEventOtherMouseDragged
     (32, (None, 0, 0, 0)),   # NSEventTypeSmartMagnify
     (33, (None, 0, 0, 0)),   # NSEventTypeQuickLook
     (34, (None, 0, 0, 0)),   # NSEventTypePressure
@@ -1101,8 +1111,7 @@ MAC_EVENT_CODES = (
 
 MAC_KEYS = (
     (0x00, 30),  # kVK_ANSI_A
-    (0x01, 31),  # kVK_ANSI_S
-    (0x02, 32),  # kVK_ANSI_D
+    (0x01, 31),  # kVK_ANSI_S    (0x02, 32),  # kVK_ANSI_D
     (0x03, 33),  # kVK_ANSI_F
     (0x04, 35),  # kVK_ANSI_H
     (0x05, 34),  # kVK_ANSI_G
@@ -1369,7 +1378,7 @@ class UnknownEventCode(IndexError):
     pass
 
 
-class InputEvent(object):
+class InputEvent(object):  # pylint: disable=useless-object-inheritance
     """A user event."""
     # pylint: disable=too-few-public-methods
     def __init__(self,
@@ -1382,7 +1391,7 @@ class InputEvent(object):
         self.ev_type = event_info["ev_type"]
 
 
-class BaseListener(object):
+class BaseListener(object):  # pylint: disable=useless-object-inheritance
     """Loosely emulate Evdev keyboard behaviour on other platforms.
     Listen (hook in Windows terminology) for key events then buffer
     them in a pipe.
@@ -1391,18 +1400,23 @@ class BaseListener(object):
     def __init__(self, pipe):
         self.pipe = pipe
         self.app = None
-        self.type_codes = {
-            "Sync": 0x00,
-            "Key": 0x01,
-            "Relative": 0x02,
-            "Absolute": 0x03,
-            "Misc": 0x04
-        }
+        self.type_codes = dict((
+            (value, key)
+            for key, value in EVENT_TYPES))
+
+#        self.type_codes = {
+#            "Sync": 0x00,
+#            "Key": 0x01,
+#            "Relative": 0x02,
+#            "Absolute": 0x03,
+#            "Misc": 0x04
+#        }
         if MAC:
             self.mac_codes = dict(MAC_KEYS)
         if not getattr(self, "codes", None):
             self.codes = None
         self.install_handle_input()
+        self._event_format = EVENT_FORMAT
 
     def install_handle_input(self):
         """Install the input handler."""
@@ -1438,7 +1452,8 @@ class BaseListener(object):
             raise UnknownEventType(
                 "We don't know what kind of event a %s is.",
                 event_type)
-        event = struct.pack(EVENT_FORMAT,
+
+        event = struct.pack(self._event_format,
                             timeval[0],
                             timeval[1],
                             event_code,
@@ -1517,6 +1532,15 @@ class BaseListener(object):
             value,
             timeval)
         return scan_event, key_event
+
+    def emulate_repeat(self, value, timeval):
+        """The repeat press of a key/mouse button, e.g. double click."""
+        repeat_event = self.create_event_object(
+            "Repeat",
+            2,
+            value,
+            timeval)
+        return repeat_event
 
     def sync_marker(self, timeval):
         """Separate groups of events."""
@@ -1763,15 +1787,233 @@ def mouse_process(pipe):
     mouse.listen()
 
 
-def mac_mouse_process(pipe):
-    """Single subprocess for reading mouse events on Mac."""
+def quartz_mouse_process(pipe):
+    """Single subprocess for reading mouse events on Mac using newer Quartz."""
+    import Quartz
+    # pylint: disable=no-member
+
+    class QuartzMouseListener(BaseListener):
+        """Loosely emulate Evdev mouse behaviour on the Macs.
+        Listen for key events then buffer them in a pipe.
+        """
+        def __init__(self, pipe):
+            super(QuartzMouseListener, self).__init__(pipe)
+            self.active = True
+            self._events = []
+            self._timeval = None
+            self._event_format = QUARTZ_EVENT_FORMAT
+            self.codes = dict(MAC_EVENT_CODES)
+
+        def install_handle_input(self):
+            """Constants below listed at:
+            https://developer.apple.com/documentation/coregraphics/
+            cgeventtype?language=objc#topics
+            """
+            # Keep Mac Names to make it easy to find the documentation
+            # pylint: disable=invalid-name
+
+            NSMachPort = Quartz.CGEventTapCreate(
+                Quartz.kCGSessionEventTap,
+                Quartz.kCGHeadInsertEventTap,
+                Quartz.kCGEventTapOptionDefault,
+                Quartz.CGEventMaskBit(Quartz.kCGEventLeftMouseDown) |
+                Quartz.CGEventMaskBit(Quartz.kCGEventLeftMouseUp) |
+                Quartz.CGEventMaskBit(Quartz.kCGEventRightMouseDown) |
+                Quartz.CGEventMaskBit(Quartz.kCGEventRightMouseUp) |
+                Quartz.CGEventMaskBit(Quartz.kCGEventMouseMoved) |
+                Quartz.CGEventMaskBit(Quartz.kCGEventLeftMouseDragged) |
+                Quartz.CGEventMaskBit(Quartz.kCGEventRightMouseDragged) |
+                Quartz.CGEventMaskBit(Quartz.kCGEventScrollWheel) |
+                Quartz.CGEventMaskBit(Quartz.kCGEventTabletPointer) |
+                Quartz.CGEventMaskBit(Quartz.kCGEventTabletProximity) |
+                Quartz.CGEventMaskBit(Quartz.kCGEventOtherMouseDown) |
+                Quartz.CGEventMaskBit(Quartz.kCGEventOtherMouseUp) |
+                Quartz.CGEventMaskBit(Quartz.kCGEventOtherMouseDragged),
+                self.handle_input,
+                None)
+
+            CFRunLoopSourceRef = Quartz.CFMachPortCreateRunLoopSource(
+                None,
+                NSMachPort,
+                0)
+            CFRunLoopRef = Quartz.CFRunLoopGetCurrent()
+            Quartz.CFRunLoopAddSource(
+                CFRunLoopRef,
+                CFRunLoopSourceRef,
+                Quartz.kCFRunLoopDefaultMode)
+            Quartz.CGEventTapEnable(
+                NSMachPort,
+                True)
+
+        def listen(self):
+            """Listen for quartz events."""
+            while self.active:
+                Quartz.CFRunLoopRunInMode(
+                    Quartz.kCFRunLoopDefaultMode, 5, False)
+
+        def uninstall_handle_input(self):
+            self.active = False
+
+        def handle_button(self, event, event_type):
+            """Convert the button information from quartz into evdev format."""
+            # 0 for left
+            # 1 for right
+            # 2 for middle/center
+            # 3 for side
+            mouse_button_number = Quartz.CGEventGetIntegerValueField(
+                event, Quartz.kCGMouseEventButtonNumber)
+
+            # Identify buttons 3,4,5
+            if event_type in (25, 26):
+                event_type = event_type + (mouse_button_number * 0.1)
+
+            # Add buttons to events
+            event_type_string, event_code, value, scan = self.codes[event_type]
+            if event_type_string == "Key":
+                scan_event, key_event = self.emulate_press(
+                    event_code, scan, value, self.timeval)
+                self.events.append(scan_event)
+                self.events.append(key_event)
+
+            # doubleclick/n-click of button
+            click_state = Quartz.CGEventGetIntegerValueField(
+                event, Quartz.kCGMouseEventClickState)
+            repeat = self.emulate_repeat(click_state, self.timeval)
+            self.events.append(repeat)
+
+            # Note sure what to do with the below
+            #  Sequential count
+            #  button_press_number = Quartz.CGEventGetIntegerValueField(
+            #      event, Quartz.kCGMouseEventNumber)
+            #  Button pressure
+            #  button_pressure = Quartz.CGEventGetDoubleValueField(
+            #      event, Quartz.kCGMouseEventPressure)
+
+        def handle_scrollwheel(self, event):
+            """Handle the scrollwheel (it is a ball on the mighty mouse)."""
+            # relative Scrollwheel
+            scroll_y = Quartz.CGEventGetIntegerValueField(
+                event, Quartz.kCGScrollWheelEventDeltaAxis1)
+            scroll_x = Quartz.CGEventGetIntegerValueField(
+                event, Quartz.kCGScrollWheelEventDeltaAxis2)
+
+            # The above with floating part after decimal point
+            scroll_y_float = Quartz.CGEventGetDoubleValueField(
+                event, Quartz.kCGScrollWheelEventFixedPtDeltaAxis1)
+            scroll_x_float = Quartz.CGEventGetDoubleValueField(
+                event, Quartz.kCGScrollWheelEventFixedPtDeltaAxis2)
+
+            # The above but one order of magnitude left
+            scroll_y_pixel = Quartz.CGEventGetIntegerValueField(
+                event, Quartz.kCGScrollWheelEventPointDeltaAxis1)
+            scroll_x_pixel = Quartz.CGEventGetIntegerValueField(
+                event, Quartz.kCGScrollWheelEventPointDeltaAxis2)
+
+            if scroll_x:
+                self.events.append(
+                    self.emulate_wheel(scroll_x, 'x', self.timeval))
+
+            if scroll_y:
+                self.events.append(
+                    self.emulate_wheel(scroll_y, 'y', self.timeval))
+
+            # 1 is "pixel"
+            # 0 is "line"
+            fp_scroll_mode = Quartz.CGEventGetIntegerValueField(
+                event, Quartz.kCGScrollWheelEventIsContinuous)
+
+            print("scroll 1", scroll_x, scroll_y)
+            print("scroll 2", scroll_x_float, scroll_y_float)
+            print("scroll 3", scroll_x_pixel, scroll_y_pixel)
+
+        def handle_absolute(self, event):
+            """Absolute mouse position on the screen."""
+            (x_val, y_val) = Quartz.CGEventGetLocation(event)
+            x_event, y_event = self.emulate_abs(
+                x_val,
+                y_val,
+                self.timeval)
+            self.events.append(x_event)
+            self.events.append(y_event)
+
+        def handle_relative(self, event):
+            """Relative mouse movement."""
+            delta_x = Quartz.CGEventGetIntegerValueField(
+                event, Quartz.kCGMouseEventDeltaX)
+            delta_y = Quartz.CGEventGetIntegerValueField(
+                event, Quartz.kCGMouseEventDeltaY)
+            if delta_x:
+                self.events.append(
+                    self.emulate_rel(0x00,
+                                     delta_x,
+                                     self.timeval))
+            if delta_y:
+                self.events.append(
+                    self.emulate_rel(0x01,
+                                     delta_y,
+                                     self.timeval))
+
+        def handle_tablet(self, event):
+            """TODO: Handle Tablet."""
+            # Absolute
+            tablet_abs_x = Quartz.CGEventGetIntegerValueField(
+                event, Quartz.kCGTabletEventPointX)
+            tablet_abs_y = Quartz.CGEventGetIntegerValueField(
+                event, Quartz.kCGTabletEventPointY)
+            tablet_abs_z = Quartz.CGEventGetIntegerValueField(
+                event, Quartz.kCGTabletEventPointY)
+            # Tablet buttons
+            tablet_buttons = Quartz.CGEventGetIntegerValueField(
+                event, Quartz.kCGTabletEventPointButtons)
+            # Tablet pen pressure
+            tablet_pressure = Quartz.CGEventGetDoubleValueField(
+                event, Quartz.kCGTabletEventPointPressure)
+            tablet_tilt_x = Quartz.CGEventGetDoubleValueField(
+                event, Quartz.kCGTabletEventTiltX)
+            tablet_tilt_y = Quartz.CGEventGetDoubleValueField(
+                event, Quartz.kCGTabletEventTiltY)
+            tablet_pen_rotation = Quartz.CGEventGetDoubleValueField(
+                event, Quartz.kCGTabletEventRotation)
+            # There are loads more tablet things available.
+
+        # pylint: disable=unused-argument
+        def handle_input(self, proxy, event_type, event, refcon):
+            """Handle an input event."""
+            self.timeval = self.get_timeval()
+            self.events = []
+
+            if event_type in (1, 2, 3, 4, 25, 26, 27):
+                self.handle_button(event, event_type)
+
+            if event_type == 22:
+                self.handle_scrollwheel(event)
+
+            # Add in the absolute position of the mouse cursor
+            self.handle_absolute(event)
+
+            # Add in the relative position of the mouse cursor
+            self.handle_relative(event)
+
+            # End with a sync marker
+            self.events.append(self.sync_marker(self.timeval))
+
+            # We are done
+            self.write_to_pipe(self.events)
+
+    mouse = QuartzMouseListener(pipe)
+    mouse.listen()
+
+
+def appkit_mouse_process(pipe):
+    """Single subprocess for reading mouse events on Mac using older AppKit."""
     # pylint: disable=import-error,too-many-locals
 
     # Note Objective C does not support a Unix style fork.
     # So these imports have to be inside the child subprocess since
     # otherwise the child process cannot use them.
 
-    from Foundation import NSObject, NSLog
+    # pylint: disable=no-member, no-name-in-module
+    from Foundation import NSObject
     from AppKit import NSApplication, NSApp
     from Cocoa import (NSEvent, NSLeftMouseDownMask,
                        NSLeftMouseUpMask, NSRightMouseDownMask,
@@ -1793,6 +2035,7 @@ def mac_mouse_process(pipe):
             # ALWAYS call the super's designated initializer.
             # Also, make sure to re-bind "self" just in case it
             # returns something else!
+            # pylint: disable=self-cls-assignment
             self = super(MacMouseSetup, self).init()
 
             self.handler = handler
@@ -1809,6 +2052,7 @@ def mac_mouse_process(pipe):
                     NSRightMouseDownMask | NSRightMouseUpMask |
                     NSMouseMovedMask | NSLeftMouseDraggedMask |
                     NSRightMouseDraggedMask | NSScrollWheelMask |
+                    NSMouseEnteredMask | NSMouseExitedMask |
                     NSOtherMouseDownMask | NSOtherMouseUpMask)
             NSEvent.addGlobalMonitorForEventsMatchingMask_handler_(
                 mask, self.handler)
@@ -1846,7 +2090,7 @@ def mac_mouse_process(pipe):
             buttonnumber = event.buttonNumber()
 
             # Identify buttons 3,4,5
-            if code == 25 or code == 26:
+            if code in (25, 26):
                 code = code + (buttonnumber * 0.1)
 
             # Add buttons to events
@@ -1859,7 +2103,7 @@ def mac_mouse_process(pipe):
 
             delta_x = round(event.deltaX())
             delta_y = round(event.deltaY())
-            delta_z = round(event.deltaY())
+            delta_z = round(event.deltaZ())
 
             # Mouse wheel
             if code == 22:
@@ -1904,6 +2148,7 @@ def mac_mouse_process(pipe):
             # We are done
             self.write_to_pipe(events)
 
+    # pylint: disable=unused-variable
     mouse = MacMouseListener(pipe)
 
 
@@ -1914,8 +2159,9 @@ def mac_keyboard_process(pipe):
     # So these imports have to be inside the child subprocess since
     # otherwise the child process cannot use them.
 
+    # pylint: disable=no-member, no-name-in-module
     from AppKit import NSApplication, NSApp
-    from Foundation import NSObject, NSLog
+    from Foundation import NSObject
     from Cocoa import (NSEvent, NSKeyDownMask, NSKeyUpMask,
                        NSFlagsChangedMask)
     from PyObjCTools import AppHelper
@@ -1923,6 +2169,7 @@ def mac_keyboard_process(pipe):
 
     class MacKeyboardSetup(NSObject):
         """Setup the handler."""
+
         @objc.python_method
         def init_with_handler(self, handler):
             """
@@ -1931,6 +2178,8 @@ def mac_keyboard_process(pipe):
             # ALWAYS call the super's designated initializer.
             # Also, make sure to re-bind "self" just in case it
             # returns something else!
+
+            # pylint: disable=self-cls-assignment
             self = super(MacKeyboardSetup, self).init()
 
             self.handler = handler
@@ -2001,10 +2250,11 @@ def mac_keyboard_process(pipe):
             # We are done
             self.write_to_pipe(events)
 
+    # pylint: disable=unused-variable
     keyboard = MacKeyboardListener(pipe)
 
 
-class InputDevice(object):
+class InputDevice(object):  # pylint: disable=useless-object-inheritance
     """A user input device."""
     # pylint: disable=too-many-instance-attributes
     def __init__(self, manager, device_path,
@@ -2027,6 +2277,13 @@ class InputDevice(object):
             with open("/sys/class/input/%s/device/name" %
                       self.get_char_name()) as name_file:
                 self.name = name_file.read().strip()
+
+        self._event_format = EVENT_FORMAT
+        self._calculate_event_size()
+
+    def _calculate_event_size(self):
+        """The size of each raw event."""
+        self._event_size = struct.calcsize(self._event_format)
 
     def _get_path_infomation(self):
         """Get useful infomation from the device path."""
@@ -2086,13 +2343,13 @@ class InputDevice(object):
 
     def _do_iter(self):
         if self.read_size:
-            read_size = EVENT_SIZE * self.read_size
+            read_size = self._event_size * self.read_size
         else:
-            read_size = EVENT_SIZE
+            read_size = self._event_size
         data = self._get_data(read_size)
         if not data:
             return
-        evdev_objects = iter_unpack(data)
+        evdev_objects = iter_unpack(data, self._event_format)
         events = [self._make_event(*event) for event in evdev_objects]
         return events
 
@@ -2168,7 +2425,7 @@ class Mouse(InputDevice):
         if WIN:
             return mouse_process
         if MAC:
-            return mac_mouse_process
+            return appkit_mouse_process
 
     def _get_data(self, read_size):
         """Get data from the character device."""
@@ -2176,6 +2433,25 @@ class Mouse(InputDevice):
             return super(Mouse, self)._get_data(read_size)
         return self._pipe.recv_bytes()
 
+
+class MightyMouse(Mouse):
+    """A mouse or other pointing device on the Mac."""
+    def __init__(self,
+                 manager,
+                 device_path,
+                 char_path_override=None,
+                 read_size=1):
+        super(MightyMouse, self).__init__(manager,
+                                          device_path,
+                                          char_path_override,
+                                          read_size)
+        self._event_format = QUARTZ_EVENT_FORMAT
+        self._calculate_event_size()
+
+    @staticmethod
+    def _get_target_function():
+        """Get the correct target function."""
+        return quartz_mouse_process
 
 # I made this GamePad class before Mouse and Keyboard above, and have
 # learned a lot about Windows in the process.  This can probably be
@@ -2239,7 +2515,7 @@ class GamePad(InputDevice):
             raise UnknownEventType(
                 "We don't know what kind of event a %s is.",
                 event_type)
-        event = struct.pack(EVENT_FORMAT,
+        event = struct.pack(self._event_format,
                             timeval[0],
                             timeval[1],
                             event_code,
@@ -2462,7 +2738,7 @@ class RawInputDeviceList(ctypes.Structure):
     ]
 
 
-class DeviceManager(object):
+class DeviceManager(object):  # pylint: disable=useless-object-inheritance
     """Provides access to all connected and detectible user input
     devices."""
     # pylint: disable=too-many-instance-attributes
@@ -2570,23 +2846,13 @@ class DeviceManager(object):
             self,
             "/dev/input/by-id/usb-AppKit_Keyboard-event-kbd"))
 
-        if self._has_quartz_mouse():
-            self.mice.append(Mouse(
-                self,
-                "/dev/input/by-id/usb-Quartz_Mouse-event-mouse"))
+        self.mice.append(MightyMouse(
+            self,
+            "/dev/input/by-id/usb-Quartz_Mouse-event-mouse"))
 
         self.mice.append(Mouse(
             self,
             "/dev/input/by-id/usb-AppKit_Mouse-event-mouse"))
-
-    def _has_quartz_mouse(self):
-        """Detect Quartz Mouse."""
-        try:
-            import Quartz
-        except ImportError:
-            return False
-        else:
-            return True
 
     def _detect_gamepads(self):
         """Find gamepads."""
@@ -2710,7 +2976,7 @@ class DeviceManager(object):
         try:
             return self.codes[evtype][code]
         except KeyError:
-            raise UnknownEventCode("We don't know this event.")
+            raise UnknownEventCode("We don't know this event.", evtype, code)
 
 
 devices = DeviceManager()  # pylint: disable=invalid-name
