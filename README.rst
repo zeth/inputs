@@ -35,13 +35,10 @@ To get started quickly, just use the following::
 For other examples, keep reading.
 
 Inputs is in pure Python and there are no dependencies on Raspberry
-Pi, Linux or Windows. On the Mac, inputs needs PyObjC which Apple
-installs by default in the system Python. To get PyObjC for your own
-user-installed Python go to:
+Pi, Linux or Windows. On the Mac, inputs needs PyObjC which the
+included setup.py file will install automatically (as will pip).
 
-    http://pythonhosted.org/pyobjc/
-
-To get involved, please visit the github project at:
+To get involved with inputs, please visit the github project at:
 
     https://github.com/zeth/inputs
 

@@ -1,7 +1,10 @@
 """Setup file for Inputs module."""
 
 from __future__ import with_statement
+import platform
+
 import inputs
+
 
 try:
     from setuptools import setup
@@ -19,6 +22,12 @@ try:
 except ImportError:
     TESTS_REQUIRE.append('mock')
 
+INSTALL_REQUIRES = []
+
+MAC = True if platform.system() == 'Darwin' else False
+
+if MAC:
+    INSTALL_REQUIRES.append('pyobjc-framework-Quartz')
 
 INPUTS_CLASSIFIERS = [
     "Programming Language :: Python :: 2.7",
@@ -55,5 +64,7 @@ KWARGS = {
 if SETUPTOOLS:
     KWARGS['tests_require'] = TESTS_REQUIRE
     KWARGS['test_suite'] = 'tests'
+    KWARGS['install_requires'] = INSTALL_REQUIRES
+
 
 setup(**KWARGS)
