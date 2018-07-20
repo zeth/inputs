@@ -27,7 +27,6 @@ INSTALL_REQUIRES = []
 MAC = True if platform.system() == 'Darwin' else False
 
 if MAC:
-    INSTALL_REQUIRES.append('pyobjc')
     INSTALL_REQUIRES.append('pyobjc-framework-Quartz')
 
 INPUTS_CLASSIFIERS = [
