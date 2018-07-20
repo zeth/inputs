@@ -83,11 +83,6 @@ OLD = sys.version_info < (3, 4)
 # long, long, unsigned short, unsigned short, int
 EVENT_FORMAT = str('llHHi')
 
-# Extended format for Apple's Mighty Mouse/Magic Mouse.
-# long, long, unsigned short, unsigned short, float
-QUARTZ_EVENT_FORMAT = str('llHHf')
-
-
 EVENT_SIZE = struct.calcsize(EVENT_FORMAT)
 
 
@@ -102,9 +97,9 @@ if OLD:
         """Yield successive 24-sized chunks from message."""
         return chunks(raw)
 else:
-    def iter_unpack(raw, event_format=EVENT_FORMAT):
+    def iter_unpack(raw):
         """Yield successive 24-sized chunks from message."""
-        return struct.iter_unpack(event_format, raw)
+        return struct.iter_unpack(EVENT_FORMAT, raw)
 
 
 SPECIAL_DEVICES = (
@@ -1066,9 +1061,12 @@ WINCODES = (
 )
 
 MAC_EVENT_CODES = (
-    (1, ("Key", 0x110, 1, 589825)),    # NSLeftMouseDown Quartz.kCGEventLeftMouseDown
-    (2, ("Key", 0x110, 0, 589825)),    # NSLeftMouseUp Quartz.kCGEventLeftMouseUp
-    (3, ("Key", 0x111, 1, 589826)),    # NSRightMouseDown Quartz.kCGEventRightMouseDown
+    # NSLeftMouseDown Quartz.kCGEventLeftMouseDown
+    (1, ("Key", 0x110, 1, 589825)),
+    # NSLeftMouseUp Quartz.kCGEventLeftMouseUp
+    (2, ("Key", 0x110, 0, 589825)),
+    # NSRightMouseDown Quartz.kCGEventRightMouseDown
+    (3, ("Key", 0x111, 1, 589826)),
     # NSRightMouseUp Quartz.kCGEventRightMouseUp
     (4, ("Key", 0x111, 0, 589826)),
     (5, (None, 0, 0, 0)),    # NSMouseMoved Quartz.kCGEventMouseMoved
@@ -1400,23 +1398,16 @@ class BaseListener(object):  # pylint: disable=useless-object-inheritance
     def __init__(self, pipe):
         self.pipe = pipe
         self.app = None
+        self.timeval = None
         self.type_codes = dict((
             (value, key)
             for key, value in EVENT_TYPES))
 
-#        self.type_codes = {
-#            "Sync": 0x00,
-#            "Key": 0x01,
-#            "Relative": 0x02,
-#            "Absolute": 0x03,
-#            "Misc": 0x04
-#        }
         if MAC:
             self.mac_codes = dict(MAC_KEYS)
         if not getattr(self, "codes", None):
             self.codes = None
         self.install_handle_input()
-        self._event_format = EVENT_FORMAT
 
     def install_handle_input(self):
         """Install the input handler."""
@@ -1438,6 +1429,13 @@ class BaseListener(object):  # pylint: disable=useless-object-inheritance
         seconds = math.floor(whole)
         return seconds, microseconds
 
+    def update_timeval(self):
+        """Get the time and make it into C style timeval."""
+        frac, whole = math.modf(time.time())
+        microseconds = math.floor(frac * 1000000)
+        seconds = math.floor(whole)
+        self.timeval = (seconds, microseconds)
+
     def create_event_object(self,
                             event_type,
                             code,
@@ -1445,7 +1443,8 @@ class BaseListener(object):  # pylint: disable=useless-object-inheritance
                             timeval=None):
         """Create an evdev style structure."""
         if not timeval:
-            timeval = self.get_timeval()
+            self.update_timeval()
+            timeval = self.timeval
         try:
             event_code = self.type_codes[event_type]
         except KeyError:
@@ -1453,7 +1452,7 @@ class BaseListener(object):  # pylint: disable=useless-object-inheritance
                 "We don't know what kind of event a %s is.",
                 event_type)
 
-        event = struct.pack(self._event_format,
+        event = struct.pack(EVENT_FORMAT,
                             timeval[0],
                             timeval[1],
                             event_code,
@@ -1615,17 +1614,17 @@ class WindowsKeyboardListener(BaseListener):
         value = WIN_KEYBOARD_CODES[wparam]
         scan_code = lparam.contents.scan_code
         vk_code = lparam.contents.vk_code
-        timeval = self.get_timeval()
+        self.update_timeval()
 
         events = []
         # Add key event
         scan_key, key_event = self.emulate_press(
-            vk_code, scan_code, value, timeval)
+            vk_code, scan_code, value, self.timeval)
         events.append(scan_key)
         events.append(key_event)
 
         # End with a sync marker
-        events.append(self.sync_marker(timeval))
+        events.append(self.sync_marker(self.timeval))
 
         # We are done
         self.write_to_pipe(events)
@@ -1736,7 +1735,7 @@ class WindowsMouseListener(BaseListener):
         # Once again ignore Windows' relative time (since system
         # startup) and use the absolute time (since epoch i.e. 1st Jan
         # 1970).
-        timeval = self.get_timeval()
+        self.update_timeval()
 
         events = []
 
@@ -1746,12 +1745,12 @@ class WindowsMouseListener(BaseListener):
             pass
         elif key_code == 0x020A:
             # We have a vertical mouse wheel turn
-            events.append(self.emulate_wheel(data, 'y', timeval))
+            events.append(self.emulate_wheel(data, 'y', self.timeval))
         elif key_code == 0x020E:
             # We have a horizontal mouse wheel turn
             # https://msdn.microsoft.com/en-us/library/windows/desktop/
             # ms645614%28v=vs.85%29.aspx
-            events.append(self.emulate_wheel(data, 'x', timeval))
+            events.append(self.emulate_wheel(data, 'x', self.timeval))
         else:
             # We have a button press.
 
@@ -1765,17 +1764,17 @@ class WindowsMouseListener(BaseListener):
             code, value, scan_code = self.mouse_codes[key_code]
             # Add in the press events
             scan_event, key_event = self.emulate_press(
-                code, scan_code, value, timeval)
+                code, scan_code, value, self.timeval)
             events.append(scan_event)
             events.append(key_event)
 
         # Add in the absolute position of the mouse cursor
-        x_event, y_event = self.emulate_abs(x_val, y_val, timeval)
+        x_event, y_event = self.emulate_abs(x_val, y_val, self.timeval)
         events.append(x_event)
         events.append(y_event)
 
         # End with a sync marker
-        events.append(self.sync_marker(timeval))
+        events.append(self.sync_marker(self.timeval))
 
         # We are done
         self.write_to_pipe(events)
@@ -1789,6 +1788,8 @@ def mouse_process(pipe):
 
 def quartz_mouse_process(pipe):
     """Single subprocess for reading mouse events on Mac using newer Quartz."""
+    # Quartz only on the mac, so don't warn about Quartz
+    # pylint: disable=import-error
     import Quartz
     # pylint: disable=no-member
 
@@ -1799,9 +1800,7 @@ def quartz_mouse_process(pipe):
         def __init__(self, pipe):
             super(QuartzMouseListener, self).__init__(pipe)
             self.active = True
-            self._events = []
-            self._timeval = None
-            self._event_format = QUARTZ_EVENT_FORMAT
+            self.events = []
             self.codes = dict(MAC_EVENT_CODES)
 
         def install_handle_input(self):
@@ -1897,18 +1896,6 @@ def quartz_mouse_process(pipe):
             scroll_x = Quartz.CGEventGetIntegerValueField(
                 event, Quartz.kCGScrollWheelEventDeltaAxis2)
 
-            # The above with floating part after decimal point
-            scroll_y_float = Quartz.CGEventGetDoubleValueField(
-                event, Quartz.kCGScrollWheelEventFixedPtDeltaAxis1)
-            scroll_x_float = Quartz.CGEventGetDoubleValueField(
-                event, Quartz.kCGScrollWheelEventFixedPtDeltaAxis2)
-
-            # The above but one order of magnitude left
-            scroll_y_pixel = Quartz.CGEventGetIntegerValueField(
-                event, Quartz.kCGScrollWheelEventPointDeltaAxis1)
-            scroll_x_pixel = Quartz.CGEventGetIntegerValueField(
-                event, Quartz.kCGScrollWheelEventPointDeltaAxis2)
-
             if scroll_x:
                 self.events.append(
                     self.emulate_wheel(scroll_x, 'x', self.timeval))
@@ -1917,21 +1904,12 @@ def quartz_mouse_process(pipe):
                 self.events.append(
                     self.emulate_wheel(scroll_y, 'y', self.timeval))
 
-            # 1 is "pixel"
-            # 0 is "line"
-            fp_scroll_mode = Quartz.CGEventGetIntegerValueField(
-                event, Quartz.kCGScrollWheelEventIsContinuous)
-
-            print("scroll 1", scroll_x, scroll_y)
-            print("scroll 2", scroll_x_float, scroll_y_float)
-            print("scroll 3", scroll_x_pixel, scroll_y_pixel)
-
         def handle_absolute(self, event):
             """Absolute mouse position on the screen."""
             (x_val, y_val) = Quartz.CGEventGetLocation(event)
             x_event, y_event = self.emulate_abs(
-                x_val,
-                y_val,
+                int(x_val),
+                int(y_val),
                 self.timeval)
             self.events.append(x_event)
             self.events.append(y_event)
@@ -1953,33 +1931,10 @@ def quartz_mouse_process(pipe):
                                      delta_y,
                                      self.timeval))
 
-        def handle_tablet(self, event):
-            """TODO: Handle Tablet."""
-            # Absolute
-            tablet_abs_x = Quartz.CGEventGetIntegerValueField(
-                event, Quartz.kCGTabletEventPointX)
-            tablet_abs_y = Quartz.CGEventGetIntegerValueField(
-                event, Quartz.kCGTabletEventPointY)
-            tablet_abs_z = Quartz.CGEventGetIntegerValueField(
-                event, Quartz.kCGTabletEventPointY)
-            # Tablet buttons
-            tablet_buttons = Quartz.CGEventGetIntegerValueField(
-                event, Quartz.kCGTabletEventPointButtons)
-            # Tablet pen pressure
-            tablet_pressure = Quartz.CGEventGetDoubleValueField(
-                event, Quartz.kCGTabletEventPointPressure)
-            tablet_tilt_x = Quartz.CGEventGetDoubleValueField(
-                event, Quartz.kCGTabletEventTiltX)
-            tablet_tilt_y = Quartz.CGEventGetDoubleValueField(
-                event, Quartz.kCGTabletEventTiltY)
-            tablet_pen_rotation = Quartz.CGEventGetDoubleValueField(
-                event, Quartz.kCGTabletEventRotation)
-            # There are loads more tablet things available.
-
         # pylint: disable=unused-argument
         def handle_input(self, proxy, event_type, event, refcon):
             """Handle an input event."""
-            self.timeval = self.get_timeval()
+            self.update_timeval()
             self.events = []
 
             if event_type in (1, 2, 3, 4, 25, 26, 27):
@@ -2081,7 +2036,7 @@ def appkit_mouse_process(pipe):
         def handle_input(self, event):
             """Process the mouse event."""
 
-            timeval = self.get_timeval()
+            self.set_timeval()
             events = []
             code = event.type()
 
@@ -2097,7 +2052,7 @@ def appkit_mouse_process(pipe):
             event_type, event_code, value, scan = self.codes[code]
             if event_type == "Key":
                 scan_event, key_event = self.emulate_press(
-                    event_code, scan, value, timeval)
+                    event_code, scan, value, self.timeval)
                 events.append(scan_event)
                 events.append(key_event)
 
@@ -2109,41 +2064,41 @@ def appkit_mouse_process(pipe):
             if code == 22:
                 if delta_x:
                     events.append(
-                        self.emulate_wheel(delta_x, 'x', timeval))
+                        self.emulate_wheel(delta_x, 'x', self.timeval))
                 if delta_y:
                     events.append(
-                        self.emulate_wheel(delta_y, 'y', timeval))
+                        self.emulate_wheel(delta_y, 'y', self.timeval))
                 if delta_z:
                     events.append(
-                        self.emulate_wheel(delta_z, 'z', timeval))
+                        self.emulate_wheel(delta_z, 'z', self.timeval))
             # Other relative mouse movements
             else:
                 if delta_x:
                     events.append(
                         self.emulate_rel(0x00,
                                          delta_x,
-                                         timeval))
+                                         self.timeval))
                 if delta_y:
                     events.append(
                         self.emulate_rel(0x01,
                                          delta_y,
-                                         timeval))
+                                         self.timeval))
                 if delta_z:
                     events.append(
                         self.emulate_rel(0x02,
                                          delta_z,
-                                         timeval))
+                                         self.timeval))
 
             # Add in the absolute position of the mouse cursor
             point = event.locationInWindow()
             x_pos = round(point.x)
             y_pos = round(point.y)
-            x_event, y_event = self.emulate_abs(x_pos, y_pos, timeval)
+            x_event, y_event = self.emulate_abs(x_pos, y_pos, self.timeval)
             events.append(x_event)
             events.append(y_event)
 
             # End with a sync marker
-            events.append(self.sync_marker(timeval))
+            events.append(self.sync_marker(self.timeval))
 
             # We are done
             self.write_to_pipe(events)
@@ -2218,7 +2173,7 @@ def mac_keyboard_process(pipe):
 
         def handle_input(self, event):
             """Process they keyboard input."""
-            timeval = self.get_timeval()
+            self.set_timeval()
             events = []
             key_code = event.keyCode()
             if key_code in self.mac_codes:
@@ -2241,12 +2196,12 @@ def mac_keyboard_process(pipe):
             else:
                 value = -1
             scan_event, key_event = self.emulate_press(
-                new_code, key_code, value, timeval)
+                new_code, key_code, value, self.timeval)
 
             events.append(scan_event)
             events.append(key_event)
             # End with a sync marker
-            events.append(self.sync_marker(timeval))
+            events.append(self.sync_marker(self.timeval))
             # We are done
             self.write_to_pipe(events)
 
@@ -2277,13 +2232,6 @@ class InputDevice(object):  # pylint: disable=useless-object-inheritance
             with open("/sys/class/input/%s/device/name" %
                       self.get_char_name()) as name_file:
                 self.name = name_file.read().strip()
-
-        self._event_format = EVENT_FORMAT
-        self._calculate_event_size()
-
-    def _calculate_event_size(self):
-        """The size of each raw event."""
-        self._event_size = struct.calcsize(self._event_format)
 
     def _get_path_infomation(self):
         """Get useful infomation from the device path."""
@@ -2343,13 +2291,13 @@ class InputDevice(object):  # pylint: disable=useless-object-inheritance
 
     def _do_iter(self):
         if self.read_size:
-            read_size = self._event_size * self.read_size
+            read_size = EVENT_SIZE * self.read_size
         else:
-            read_size = self._event_size
+            read_size = EVENT_SIZE
         data = self._get_data(read_size)
         if not data:
             return
-        evdev_objects = iter_unpack(data, self._event_format)
+        evdev_objects = iter_unpack(data)
         events = [self._make_event(*event) for event in evdev_objects]
         return events
 
@@ -2436,17 +2384,6 @@ class Mouse(InputDevice):
 
 class MightyMouse(Mouse):
     """A mouse or other pointing device on the Mac."""
-    def __init__(self,
-                 manager,
-                 device_path,
-                 char_path_override=None,
-                 read_size=1):
-        super(MightyMouse, self).__init__(manager,
-                                          device_path,
-                                          char_path_override,
-                                          read_size)
-        self._event_format = QUARTZ_EVENT_FORMAT
-        self._calculate_event_size()
 
     @staticmethod
     def _get_target_function():
@@ -2515,7 +2452,7 @@ class GamePad(InputDevice):
             raise UnknownEventType(
                 "We don't know what kind of event a %s is.",
                 event_type)
-        event = struct.pack(self._event_format,
+        event = struct.pack(EVENT_FORMAT,
                             timeval[0],
                             timeval[1],
                             event_code,
