@@ -2036,7 +2036,7 @@ def appkit_mouse_process(pipe):
         def handle_input(self, event):
             """Process the mouse event."""
 
-            self.set_timeval()
+            self.update_timeval()
             events = []
             code = event.type()
 
@@ -2173,7 +2173,7 @@ def mac_keyboard_process(pipe):
 
         def handle_input(self, event):
             """Process they keyboard input."""
-            self.set_timeval()
+            self.update_timeval()
             events = []
             key_code = event.keyCode()
             if key_code in self.mac_codes:
