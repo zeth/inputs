@@ -1405,6 +1405,7 @@ class BaseListener(object):  # pylint: disable=useless-object-inheritance
 
         if MAC:
             self.mac_codes = dict(MAC_KEYS)
+            self.mouse_codes = dict(MAC_EVENT_CODES)
         if not getattr(self, "codes", None):
             self.codes = None
         self.install_handle_input()
@@ -1880,14 +1881,6 @@ def quartz_mouse_process(pipe):
             repeat = self.emulate_repeat(click_state, self.timeval)
             self.events.append(repeat)
 
-            # Note sure what to do with the below
-            #  Sequential count
-            #  button_press_number = Quartz.CGEventGetIntegerValueField(
-            #      event, Quartz.kCGMouseEventNumber)
-            #  Button pressure
-            #  button_pressure = Quartz.CGEventGetDoubleValueField(
-            #      event, Quartz.kCGMouseEventPressure)
-
         def handle_scrollwheel(self, event):
             """Handle the scrollwheel (it is a ball on the mighty mouse)."""
             # relative Scrollwheel
@@ -1992,7 +1985,6 @@ def appkit_mouse_process(pipe):
             # returns something else!
             # pylint: disable=self-cls-assignment
             self = super(MacMouseSetup, self).init()
-
             self.handler = handler
 
             # Unlike Python's __init__, initializers MUST return self,
@@ -2018,7 +2010,6 @@ def appkit_mouse_process(pipe):
         """
         def __init__(self, pipe):
             super(MacMouseListener, self).__init__(pipe)
-            self.codes = dict(MAC_EVENT_CODES)
 
         def install_handle_input(self):
             """Install the hook."""
@@ -2035,21 +2026,17 @@ def appkit_mouse_process(pipe):
 
         def handle_input(self, event):
             """Process the mouse event."""
-
             self.update_timeval()
             events = []
             code = event.type()
-
             # Deal with buttons
 
             buttonnumber = event.buttonNumber()
-
             # Identify buttons 3,4,5
             if code in (25, 26):
                 code = code + (buttonnumber * 0.1)
-
             # Add buttons to events
-            event_type, event_code, value, scan = self.codes[code]
+            event_type, event_code, value, scan = self.mouse_codes[code]
             if event_type == "Key":
                 scan_event, key_event = self.emulate_press(
                     event_code, scan, value, self.timeval)
