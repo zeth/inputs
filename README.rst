@@ -171,8 +171,8 @@ yourself.
 More testing and support for common gamepads will come in due course.
 
 Apple Mac OS X doesn't natively support gamepads. If you use third
-party software that allows a gamepad to emulate a keyboard, then you
-may be able to use the keyboard class.
+party driver software that allows a gamepad to emulate a keyboard or a
+mouse, then you may be able to use the keyboard or mouse class.
 
 Raspberry Pi Sense HAT
 ----------------------
