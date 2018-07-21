@@ -170,14 +170,9 @@ yourself.
 
 More testing and support for common gamepads will come in due course.
 
-On Linux and Raspberry Pi, the guide button (also known as home or
-mode or the fancy branded button) is exposed as BTN_MODE.
-
-On Windows, I haven't bothered to support it yet. It is not officially
-exposed to applications and using it unofficially requires every user
-to turn Game DVR off in the Windows Xbox app settings.
-
-On macOS,
+Apple Mac OS X doesn't natively support gamepads. If you use third
+party driver software that allows a gamepad to emulate a keyboard or a
+mouse, then you may be able to use the keyboard or mouse class.
 
 Raspberry Pi Sense HAT
 ----------------------
@@ -185,6 +180,12 @@ Raspberry Pi Sense HAT
 The microcontroller on the Raspberry Pi Sense HAT presents the
 joystick to the operating system as a keyboard, so find it there under
 keyboards. If you worry about this, you are over-thinking things.
+
+Raspberry Pi Touch Screen
+-------------------------
+
+This presents as a mouse. Again please do not over think it.
+
 
 Windows permissions
 -------------------
