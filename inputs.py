@@ -56,7 +56,7 @@ from operator import itemgetter
 from multiprocessing import Process, Pipe
 import ctypes
 
-__version__ = "0.2"
+__version__ = "0.3"
 
 WIN = True if platform.system() == 'Windows' else False
 MAC = True if platform.system() == 'Darwin' else False
