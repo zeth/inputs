@@ -2347,6 +2347,8 @@ class Keyboard(InputDevice):
         super(Keyboard, self)._set_name()
         if WIN:
             self.name = "Microsoft Keyboard"
+        elif MAC:
+            self.name = "AppKit Keyboard"
 
     @staticmethod
     def _get_target_function():
@@ -2371,6 +2373,8 @@ class Mouse(InputDevice):
         super(Mouse, self)._set_name()
         if WIN:
             self.name = "Microsoft Mouse"
+        elif MAC:
+            self.name = "AppKit Mouse"
 
     @staticmethod
     def _get_target_function():
@@ -2389,6 +2393,9 @@ class Mouse(InputDevice):
 
 class MightyMouse(Mouse):
     """A mouse or other pointing device on the Mac."""
+
+    def _set_name(self):
+        self.name = "Quartz Mouse"
 
     @staticmethod
     def _get_target_function():
