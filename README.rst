@@ -22,8 +22,8 @@ About
 The inputs module provides an easy way for your Python program to
 listen for user input.
 
-Currently supported platforms are the Raspberry Pi, Linux, Windows and
-the Apple Mac.
+Currently supported platforms are Linux (including the Raspberry Pi
+and Chromebooks in developer mode), Windows and the Apple Mac.
 
 Python versions supported are all versions of Python 3 and your
 granddad's Python 2.7.
