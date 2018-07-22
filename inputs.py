@@ -87,18 +87,18 @@ EVENT_SIZE = struct.calcsize(EVENT_FORMAT)
 
 
 def chunks(raw):
-    """Yield successive 24-sized chunks from raw."""
-    for i in range(0, len(raw), 24):
-        yield struct.unpack(EVENT_FORMAT, raw[i:i+24])
+    """Yield successive EVENT_SIZE sized chunks from raw."""
+    for i in range(0, len(raw), EVENT_SIZE):
+        yield struct.unpack(EVENT_FORMAT, raw[i:i+EVENT_SIZE])
 
 
 if OLD:
     def iter_unpack(raw):
-        """Yield successive 24-sized chunks from message."""
+        """Yield successive EVENT_SIZE chunks from message."""
         return chunks(raw)
 else:
     def iter_unpack(raw):
-        """Yield successive 24-sized chunks from message."""
+        """Yield successive EVENT_SIZE chunks from message."""
         return struct.iter_unpack(EVENT_FORMAT, raw)
 
 
