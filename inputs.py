@@ -2215,7 +2215,12 @@ class InputDevice(object):  # pylint: disable=useless-object-inheritance
         if WIN or MAC:
             self.__pipe = None
             self._listener = None
-        else:
+
+        self.name = "Unknown Device"
+        self._set_name()
+
+    def _set_name(self):
+        if NIX:
             with open("/sys/class/input/%s/device/name" %
                       self.get_char_name()) as name_file:
                 self.name = name_file.read().strip()
@@ -2232,7 +2237,10 @@ class InputDevice(object):  # pylint: disable=useless-object-inheritance
         return self._character_device_path.split('/')[-1]
 
     def __str__(self):
-        return self.name
+        try:
+            return self.name
+        except AttributeError:
+            return "Unknown Device"
 
     def __repr__(self):
         return '%s.%s("%s")' % (
@@ -2335,6 +2343,11 @@ class Keyboard(InputDevice):
     Original umapped scan code, followed by the important key info
     followed by a sync.
     """
+    def _set_name(self):
+        super(Keyboard, self)._set_name()
+        if WIN:
+            self.name = "Microsoft Keyboard"
+
     @staticmethod
     def _get_target_function():
         """Get the correct target function."""
@@ -2353,6 +2366,11 @@ class Keyboard(InputDevice):
 class Mouse(InputDevice):
     """A mouse or other pointing-like device.
     """
+
+    def _set_name(self):
+        super(Mouse, self)._set_name()
+        if WIN:
+            self.name = "Microsoft Mouse"
 
     @staticmethod
     def _get_target_function():
