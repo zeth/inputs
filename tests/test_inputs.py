@@ -45,6 +45,70 @@ class InputEventTestCase(TestCase):
 KEYBOARD_PATH = "/dev/input/by-path/my-lovely-keyboard-0-event-kbd"
 MOUSE_PATH = "/dev/input/by-path/my-lovely-mouse-0-event-mouse"
 GAMEPAD_PATH = "/dev/input/by-path/my-lovely-gamepad-0-event-joystick"
+OTHER_PATH = "/dev/input/by-path/the-machine-that-goes-ping-other"
+
+
+class DeviceManagePostrInitTestCase(TestCase):
+    """Test the device manager class' post-init method."""
+
+    @mock.patch.object(inputs.DeviceManager, '_find_devices')
+    @mock.patch.object(inputs.DeviceManager, '_find_devices_mac')
+    @mock.patch.object(inputs.DeviceManager, '_find_devices_win')
+    @mock.patch.object(inputs.DeviceManager, '_update_all_devices')
+    def test_post_init_linux(
+            self,
+            mock_update_all_devices,
+            mock_find_devices_win,
+            mock_find_devices_mac,
+            mock_find_devices):
+        """On Linux, find_devices is called and the other methods are not."""
+        inputs.WIN = False
+        inputs.MAC = False
+        device_manger = inputs.DeviceManager()
+        mock_update_all_devices.assert_called()
+        mock_find_devices.assert_called()
+        mock_find_devices_mac.assert_not_called()
+        mock_find_devices_win.assert_not_called()
+
+    @mock.patch.object(inputs.DeviceManager, '_find_devices')
+    @mock.patch.object(inputs.DeviceManager, '_find_devices_mac')
+    @mock.patch.object(inputs.DeviceManager, '_find_devices_win')
+    @mock.patch.object(inputs.DeviceManager, '_update_all_devices')
+    def test_post_init_mac(self,
+                           mock_update_all_devices,
+                           mock_find_devices_win,
+                           mock_find_devices_mac,
+                           mock_find_devices):
+        """On Mac, find_devices_mac is called and other methods are not."""
+        inputs.WIN = False
+        inputs.MAC = True
+        device_manger = inputs.DeviceManager()
+        mock_update_all_devices.assert_called()
+        mock_find_devices_mac.assert_called()
+        mock_find_devices.assert_not_called()
+        mock_find_devices_win.assert_not_called()
+
+    @mock.patch.object(inputs.DeviceManager, '_find_devices')
+    @mock.patch.object(inputs.DeviceManager, '_find_devices_mac')
+    @mock.patch.object(inputs.DeviceManager, '_find_devices_win')
+    @mock.patch.object(inputs.DeviceManager, '_update_all_devices')
+    def test_post_init_win(self,
+                           mock_update_all_devices,
+                           mock_find_devices_win,
+                           mock_find_devices_mac,
+                           mock_find_devices):
+        """On Windows, find_devices_win is called and other methods are not."""
+        inputs.WIN = True
+        inputs.MAC = False
+        device_manger = inputs.DeviceManager()
+        mock_update_all_devices.assert_called()
+        mock_find_devices_win.assert_called()
+        mock_find_devices.assert_not_called()
+        mock_find_devices_mac.assert_not_called()
+
+    def tearDown(self):
+        inputs.WIN = False
+        inputs.MAC = False
 
 
 class DeviceManagerTestCase(TestCase):
@@ -134,6 +198,24 @@ class DeviceManagerTestCase(TestCase):
         self.assertEqual(len(self.device_manger.gamepads), 1)
         self.assertEqual(len(self.device_manger._raw), 1)
         self.assertEqual(self.device_manger._raw[0], GAMEPAD_PATH)
+
+    @mock.patch('os.path.realpath')
+    @mock.patch('inputs.OtherDevice')
+    def test_parse_device_path_other(
+            self,
+            mock_other,
+            mock_realpath):
+        """Parses the path and adds an other object."""
+        mock_realpath.side_effect = lambda path: path
+        self.device_manger._parse_device_path(OTHER_PATH)
+        mock_other.assert_called_with(
+            mock.ANY,
+            OTHER_PATH,
+            None)
+        mock_realpath.assert_called_with(OTHER_PATH)
+        self.assertEqual(len(self.device_manger.other_devices), 1)
+        self.assertEqual(len(self.device_manger._raw), 1)
+        self.assertEqual(self.device_manger._raw[0], OTHER_PATH)
 
     def test_get_event_type(self):
         """Tests the get_event_type method."""
