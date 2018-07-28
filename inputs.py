@@ -2216,6 +2216,9 @@ class InputDevice(object):  # pylint: disable=useless-object-inheritance
                  read_size=1):
         self.read_size = read_size
         self.manager = manager
+        self.__pipe = None
+        self._listener = None
+
 
         if device_path:
             self._device_path = device_path
@@ -2229,13 +2232,9 @@ class InputDevice(object):  # pylint: disable=useless-object-inheritance
         if char_path_override:
             self._character_device_path = char_path_override
         else:
-            self._character_device_path = os.path.realpath(device_path)
+            self._character_device_path = os.path.realpath(self._device_path)
 
         self._character_file = None
-
-        if WIN or MAC:
-            self.__pipe = None
-            self._listener = None
 
         self.name = "Unknown Device"
         self._set_name()
