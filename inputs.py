@@ -1265,6 +1265,12 @@ EVENT_MAP = (
     ('Max', MAX),
     ('Current', CURRENT))
 
+# Evdev style paths for the Mac
+
+APPKIT_KB_PATH = "/dev/input/by-id/usb-AppKit_Keyboard-event-kbd"
+QUARTZ_MOUSE_PATH = "/dev/input/by-id/usb-Quartz_Mouse-event-mouse"
+APPKIT_MOUSE_PATH = "/dev/input/by-id/usb-AppKit_Mouse-event-mouse"
+
 
 # Now comes all the structs we need to parse the infomation coming
 # from Windows.
@@ -1363,6 +1369,11 @@ class PermissionDenied(IOError):
 
 class UnpluggedError(RuntimeError):
     """The device requested is not plugged in."""
+    pass
+
+
+class NoDevicePath(RuntimeError):
+    """No evdev device path was given."""
     pass
 
 
@@ -2199,17 +2210,27 @@ def mac_keyboard_process(pipe):
 class InputDevice(object):  # pylint: disable=useless-object-inheritance
     """A user input device."""
     # pylint: disable=too-many-instance-attributes
-    def __init__(self, manager, device_path,
+    def __init__(self, manager,
+                 device_path=None,
                  char_path_override=None,
                  read_size=1):
         self.read_size = read_size
         self.manager = manager
-        self._device_path = device_path
+
+        if device_path:
+            self._device_path = device_path
+        else:
+            self._set_device_path()
+        # We should by now have a device_path
+        if not self._device_path:
+            raise NoDevicePath
+
         self.protocol, _, self.device_type = self._get_path_infomation()
         if char_path_override:
             self._character_device_path = char_path_override
         else:
             self._character_device_path = os.path.realpath(device_path)
+
         self._character_file = None
 
         if WIN or MAC:
@@ -2218,6 +2239,10 @@ class InputDevice(object):  # pylint: disable=useless-object-inheritance
 
         self.name = "Unknown Device"
         self._set_name()
+
+    def _set_device_path(self):
+        """Set the device path, overridden on the MAC and Windows."""
+        pass
 
     def _set_name(self):
         if NIX:
@@ -2343,6 +2368,11 @@ class Keyboard(InputDevice):
     Original umapped scan code, followed by the important key info
     followed by a sync.
     """
+    def _set_device_path(self):
+        super(Keyboard, self)._set_device_path()
+        if MAC:
+            self._device_path = APPKIT_KB_PATH
+
     def _set_name(self):
         super(Keyboard, self)._set_name()
         if WIN:
@@ -2369,6 +2399,11 @@ class Mouse(InputDevice):
     """A mouse or other pointing-like device.
     """
 
+    def _set_device_path(self):
+        super(Mouse, self)._set_device_path()
+        if MAC:
+            self._device_path = APPKIT_MOUSE_PATH
+
     def _set_name(self):
         super(Mouse, self)._set_name()
         if WIN:
@@ -2393,6 +2428,11 @@ class Mouse(InputDevice):
 
 class MightyMouse(Mouse):
     """A mouse or other pointing device on the Mac."""
+
+    def _set_device_path(self):
+        super(MightyMouse, self)._set_device_path()
+        if MAC:
+            self._device_path = QUARTZ_MOUSE_PATH
 
     def _set_name(self):
         self.name = "Quartz Mouse"
@@ -2722,6 +2762,7 @@ class DeviceManager(object):  # pylint: disable=useless-object-inheritance
 
     def _update_all_devices(self):
         """Update the all_devices list."""
+        self.all_devices = []
         self.all_devices.extend(self.keyboards)
         self.all_devices.extend(self.mice)
         self.all_devices.extend(self.gamepads)
@@ -2791,17 +2832,9 @@ class DeviceManager(object):  # pylint: disable=useless-object-inheritance
 
     def _find_devices_mac(self):
         """Find devices on Mac."""
-        self.keyboards.append(Keyboard(
-            self,
-            "/dev/input/by-id/usb-AppKit_Keyboard-event-kbd"))
-
-        self.mice.append(MightyMouse(
-            self,
-            "/dev/input/by-id/usb-Quartz_Mouse-event-mouse"))
-
-        self.mice.append(Mouse(
-            self,
-            "/dev/input/by-id/usb-AppKit_Mouse-event-mouse"))
+        self.keyboards.append(Keyboard(self))
+        self.mice.append(MightyMouse(self))
+        self.mice.append(Mouse(self))
 
     def _detect_gamepads(self):
         """Find gamepads."""

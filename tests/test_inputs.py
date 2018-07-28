@@ -1,5 +1,5 @@
 """Tests for inputs module."""
-# pylint: disable=protected-access
+# pylint: disable=protected-access,no-self-use
 from unittest import TestCase, main
 
 try:
@@ -8,7 +8,9 @@ try:
 except ImportError:
     # Python 2
     import mock
-
+    PYTHON = 2
+else:
+    PYTHON = 3
 
 import ctypes
 
@@ -64,6 +66,7 @@ class DeviceManagePostrInitTestCase(TestCase):
         """On Linux, find_devices is called and the other methods are not."""
         inputs.WIN = False
         inputs.MAC = False
+        # pylint: disable=unused-variable
         device_manger = inputs.DeviceManager()
         mock_update_all_devices.assert_called()
         mock_find_devices.assert_called()
@@ -82,7 +85,7 @@ class DeviceManagePostrInitTestCase(TestCase):
         """On Mac, find_devices_mac is called and other methods are not."""
         inputs.WIN = False
         inputs.MAC = True
-        device_manger = inputs.DeviceManager()
+        inputs.DeviceManager()
         mock_update_all_devices.assert_called()
         mock_find_devices_mac.assert_called()
         mock_find_devices.assert_not_called()
@@ -100,7 +103,7 @@ class DeviceManagePostrInitTestCase(TestCase):
         """On Windows, find_devices_win is called and other methods are not."""
         inputs.WIN = True
         inputs.MAC = False
-        device_manger = inputs.DeviceManager()
+        inputs.DeviceManager()
         mock_update_all_devices.assert_called()
         mock_find_devices_win.assert_called()
         mock_find_devices.assert_not_called()
@@ -111,9 +114,17 @@ class DeviceManagePostrInitTestCase(TestCase):
         inputs.MAC = False
 
 
+MOCK_DEVICE = 'My Special Mock Input Device'
+MOCK_DEVICE_PATH = '/dev/input/by-id/usb-mock-special-keyboard-event-kbd'
+
+
 class DeviceManagerTestCase(TestCase):
     """Test the device manager class."""
     # pylint: disable=arguments-differ
+
+    # There can never be too many tests.
+    # pylint: disable=too-many-public-methods
+
     @mock.patch.object(inputs.DeviceManager, '_post_init')
     def setUp(self, mock_method):
         self.device_manger = inputs.DeviceManager()
@@ -125,6 +136,35 @@ class DeviceManagerTestCase(TestCase):
         self.assertEqual(self.device_manger.codes['types'][1], 'Key')
         self.assertEqual(self.device_manger.codes['Key'][1], 'KEY_ESC')
         self.assertEqual(self.device_manger.codes['xpad']['right_trigger'], 5)
+
+    def test_update_all_devices(self):
+        """Updates all_devices list."""
+        # Begins empty
+        self.assertEqual(self.device_manger.all_devices, [])
+
+        # Add devices to the lists
+        self.device_manger.keyboards = [1, 2, 3]
+        self.device_manger.mice = [4, 6, 7]
+        self.device_manger.gamepads = [8, 9, 10]
+        self.device_manger.other_devices = [11, 12, 13]
+
+        # Collate the list
+        self.device_manger._update_all_devices()
+
+        # Check the result
+        self.assertEqual(
+            self.device_manger.all_devices,
+            [1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 13])
+
+        # Reset the lists
+        self.device_manger.keyboards = []
+        self.device_manger.mice = []
+        self.device_manger.gamepads = []
+        self.device_manger.other_devices = []
+
+        # Ends empty
+        self.device_manger._update_all_devices()
+        self.assertEqual(self.device_manger.all_devices, [])
 
     @mock.patch('os.path.realpath')
     @mock.patch('inputs.Keyboard')
@@ -217,6 +257,17 @@ class DeviceManagerTestCase(TestCase):
         self.assertEqual(len(self.device_manger._raw), 1)
         self.assertEqual(self.device_manger._raw[0], OTHER_PATH)
 
+    def test_parse_invalid_path(self):
+        """Raise warning for invalid path."""
+        if PYTHON == 3:
+            with self.assertWarns(RuntimeWarning):
+                result = self.device_manger._parse_device_path("Bob")
+
+        else:
+            result = self.device_manger._parse_device_path("Jim")
+
+        self.assertIsNone(result)
+
     def test_get_event_type(self):
         """Tests the get_event_type method."""
         self.assertEqual(self.device_manger.get_event_type(0x00), "Sync")
@@ -268,6 +319,189 @@ class DeviceManagerTestCase(TestCase):
         """get_event_string raises an exception for an unknown event code."""
         with self.assertRaises(inputs.UnknownEventCode):
             self.device_manger.get_event_string('Key', 0x999)
+
+    @mock.patch.object(inputs.DeviceManager, '_find_special')
+    @mock.patch.object(inputs.DeviceManager, '_find_by')
+    def test_find_devices(self, mock_find_by, mock_find_special):
+        """It should find by path, id and specials."""
+        self.device_manger._find_devices()
+        mock_find_by.assert_called_with('path')
+        mock_find_by.assert_any_call('id')
+        mock_find_special.assert_called_once()
+
+    def test_iter(self):
+        """Iter method iterates."""
+        self.device_manger.all_devices = [0, 1, 2, 3, 4]
+        for index, device in enumerate(self.device_manger):
+            self.assertEqual(device, index)
+
+    def test_getitem_index_error(self):
+        """Raise index error for invalid index."""
+        with self.assertRaises(IndexError):
+            # pylint: disable=pointless-statement
+            self.device_manger[0]
+
+    def test_getitem(self):
+        """It gets the correct item."""
+        self.device_manger.all_devices = [0, 1, 2, 3, 4]
+        for device in (0, 1, 2, 3, 4):
+            self.assertEqual(self.device_manger[device], device)
+
+    @mock.patch.object(inputs.DeviceManager, '_parse_device_path')
+    @mock.patch('inputs.open', mock.mock_open(read_data=MOCK_DEVICE))
+    @mock.patch('glob.glob')
+    def test_find_special(self, mock_glob, mock_parse_device_path):
+        """Find a special device."""
+        mock_glob.return_value = [
+            '/sys/class/input/event1',
+            '/sys/class/input/event2',
+            '/sys/class/input/event3',
+        ]
+        self.device_manger.codes['specials'][MOCK_DEVICE] = MOCK_DEVICE_PATH
+        self.device_manger._find_special()
+        mock_parse_device_path.assert_any_call(
+            MOCK_DEVICE_PATH,
+            '/dev/input/event1')
+        mock_parse_device_path.assert_any_call(
+            MOCK_DEVICE_PATH,
+            '/dev/input/event2')
+        mock_parse_device_path.assert_any_call(
+            MOCK_DEVICE_PATH,
+            '/dev/input/event3')
+
+    @mock.patch.object(inputs.DeviceManager, '_parse_device_path')
+    @mock.patch.object(inputs.DeviceManager, '_get_char_names')
+    @mock.patch('inputs.open', mock.mock_open(read_data=MOCK_DEVICE))
+    @mock.patch('glob.glob')
+    def test_find_special_repeated(self,
+                                   mock_glob,
+                                   mock_get_char_names,
+                                   mock_parse_device_path):
+        """Find a special device but then it is already known."""
+        mock_glob.return_value = [
+            '/sys/class/input/event1',
+            '/sys/class/input/event2']
+        mock_get_char_names.return_value = ['event1', 'event2']
+        self.device_manger.codes['specials'][MOCK_DEVICE] = MOCK_DEVICE_PATH
+        self.device_manger._find_special()
+        mock_parse_device_path.assert_not_called()
+
+    @mock.patch('glob.glob')
+    @mock.patch.object(inputs.DeviceManager, '_parse_device_path')
+    def test_find_by(self,
+                     mock_parse_device_path,
+                     mock_glob):
+        """It finds the correct paths."""
+        mock_devices = [
+            '/dev/input/by-path/platform-a-shiny-keyboard-event-kbd',
+            '/dev/input/by-path/pci-a-shiny-mouse-event-mouse']
+        mock_glob.return_value = mock_devices
+        self.device_manger._find_by('path')
+        mock_parse_device_path.assert_any_call(mock_devices[0])
+        mock_parse_device_path.assert_any_call(mock_devices[1])
+
+
+class DeviceManagerPlatformTestCase(TestCase):
+    """Test the device manager class, methods that are platform specific."""
+    # pylint: disable=arguments-differ
+
+    # There can never be too many tests.
+    # pylint: disable=too-many-public-methods
+
+    @mock.patch.object(inputs.DeviceManager, '_post_init')
+    def setUp(self, mock_method):
+        self.device_manager = inputs.DeviceManager()
+        self.mock_method = mock_method
+
+    @mock.patch('inputs.Mouse')
+    @mock.patch('inputs.MightyMouse')
+    @mock.patch('inputs.Keyboard')
+    def test_find_devices_mac(self, mock_kb, mock_mighty, mock_mouse):
+        """Test the mac version of _find_devices_mac."""
+        self.device_manager._find_devices_mac()
+        number_of_keyboards = len(self.device_manager.keyboards)
+        number_of_mice = len(self.device_manager.mice)
+
+        # We should have 1 keyboard and 2 mice.
+        self.assertEqual(number_of_keyboards, 1)
+        self.assertEqual(number_of_mice, 2)
+
+        # Each of the classes should be instantiated.
+        mock_kb.assert_called_once_with(self.device_manager)
+        mock_mighty.assert_called_once_with(self.device_manager)
+        mock_mouse.assert_called_once_with(self.device_manager)
+
+
+class HelpersTestCase(TestCase):
+    """Test the device manager class."""
+    # pylint: disable=arguments-differ
+
+    # There can never be too many tests.
+    # pylint: disable=too-many-public-methods
+
+    @mock.patch('inputs.devices')
+    def setUp(self, mock_devices):
+        self.devices = mock_devices
+
+    @mock.patch('inputs.devices')
+    def test_get_key(self, devices):
+        """Get key reads from the first keyboard."""
+        keyboard = mock.MagicMock()
+        reader = mock.MagicMock()
+        keyboard.read = reader
+        devices.keyboards = [keyboard]
+
+        inputs.get_key()
+
+        reader.assert_called_once()
+
+    @mock.patch('inputs.devices')
+    def test_get_key_index_error(self, devices):
+        """Raises unpluggged error if no keyboard attached."""
+        devices.keyboards = []
+        with self.assertRaises(inputs.UnpluggedError):
+            # pylint: disable=pointless-statement
+            inputs.get_key()
+
+    @mock.patch('inputs.devices')
+    def test_get_mouse(self, devices):
+        """Get event reads from the first mouse."""
+        mouse = mock.MagicMock()
+        reader = mock.MagicMock()
+        mouse.read = reader
+        devices.mice = [mouse]
+
+        inputs.get_mouse()
+
+        reader.assert_called_once()
+
+    @mock.patch('inputs.devices')
+    def test_get_mouse_index_error(self, devices):
+        """Raises unpluggged error if no mouse attached."""
+        devices.mice = []
+        with self.assertRaises(inputs.UnpluggedError):
+            # pylint: disable=pointless-statement
+            inputs.get_mouse()
+
+    @mock.patch('inputs.devices')
+    def test_get_gamepad(self, devices):
+        """Get key reads from the first gamepad."""
+        gamepad = mock.MagicMock()
+        reader = mock.MagicMock()
+        gamepad.read = reader
+        devices.gamepads = [gamepad]
+
+        inputs.get_gamepad()
+
+        reader.assert_called_once()
+
+    @mock.patch('inputs.devices')
+    def test_get_gamepad_index_error(self, devices):
+        """Raises unpluggged error if no gamepad attached."""
+        devices.gamepads = []
+        with self.assertRaises(inputs.UnpluggedError):
+            # pylint: disable=pointless-statement
+            inputs.get_gamepad()
 
 
 if __name__ == '__main__':
