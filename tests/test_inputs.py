@@ -9,22 +9,14 @@ except ImportError:
     # Python 2
     import mock
     PYTHON = 2
+    from pathlib2 import PurePath
 else:
     PYTHON = 3
-
-import ctypes
+    from pathlib import PurePath
 
 import inputs
 
 RAW = ""
-
-
-class RawInputDeviceListTestCase(TestCase):
-    """Test the RawInputDeviceList class."""
-    def test_raw_input_device_list_size(self):
-        """Test that ctypes can use RawInputDeviceList."""
-        self.assertEqual(
-            ctypes.sizeof(inputs.RawInputDeviceList), 16)
 
 
 class InputEventTestCase(TestCase):
@@ -260,6 +252,8 @@ class DeviceManagerTestCase(TestCase):
     def test_parse_invalid_path(self):
         """Raise warning for invalid path."""
         if PYTHON == 3:
+            # Disable pylint on Python 2 moaning about assertWarns
+            # pylint: disable=no-member
             with self.assertWarns(RuntimeWarning):
                 result = self.device_manger._parse_device_path("Bob")
 
@@ -359,15 +353,22 @@ class DeviceManagerTestCase(TestCase):
         ]
         self.device_manger.codes['specials'][MOCK_DEVICE] = MOCK_DEVICE_PATH
         self.device_manger._find_special()
-        mock_parse_device_path.assert_any_call(
-            MOCK_DEVICE_PATH,
-            '/dev/input/event1')
-        mock_parse_device_path.assert_any_call(
-            MOCK_DEVICE_PATH,
-            '/dev/input/event2')
-        mock_parse_device_path.assert_any_call(
-            MOCK_DEVICE_PATH,
-            '/dev/input/event3')
+        # There should have been 3 calls to _parse_device_path
+        self.assertEqual(mock_parse_device_path.call_count, 3)
+
+        # Inpect each call
+        for index, call in enumerate(mock_parse_device_path.call_args_list):
+            # The first argument of each call should be MOCK_DEVICE_PATH
+            self.assertEqual(call[0][0], MOCK_DEVICE_PATH)
+
+            # The second argument of each call should be the target device path
+            # E.g. /dev/input/event1 etc
+            target_path = '/dev/input/event%d' % (index + 1)
+
+            # The following line coverts backslashes when running tests on Win
+            device_path = PurePath(call[0][1]).as_posix()
+
+            self.assertEqual(device_path, target_path)
 
     @mock.patch.object(inputs.DeviceManager, '_parse_device_path')
     @mock.patch.object(inputs.DeviceManager, '_get_char_names')
