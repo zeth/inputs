@@ -2219,7 +2219,6 @@ class InputDevice(object):  # pylint: disable=useless-object-inheritance
         self.__pipe = None
         self._listener = None
 
-
         if device_path:
             self._device_path = device_path
         else:
@@ -2812,7 +2811,9 @@ class DeviceManager(object):  # pylint: disable=useless-object-inheritance
                 break
         else:
             # We didn't find an xinput library
-            warn("No xinput driver dll found, gamepads not supported.")
+            warn(
+                "No xinput driver dll found, gamepads not supported.",
+                RuntimeWarning)
 
     def _find_devices_win(self):
         """Find devices on Windows."""

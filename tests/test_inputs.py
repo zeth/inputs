@@ -432,6 +432,34 @@ class DeviceManagerPlatformTestCase(TestCase):
         mock_mighty.assert_called_once_with(self.device_manager)
         mock_mouse.assert_called_once_with(self.device_manager)
 
+    @mock.patch('inputs.ctypes.windll',
+                create=True)
+    def test_find_xinput(self, mock_windll):
+        """Finds an xinput library if one is available. """
+        self.device_manager._find_xinput()
+        self.assertEqual(
+            'windll.XInput1_4.dll',
+            self.device_manager.xinput._extract_mock_name())
+
+    @mock.patch('inputs.XINPUT_DLL_NAMES')
+    @mock.patch('inputs.ctypes.windll',
+                create=True)
+    def test_find_xinput_not_available(
+            self,
+            mock_windll,
+            dll_names):
+        """Fails to find an xinput library. """
+        if PYTHON == 3:
+            # Disable pylint on Python 2 moaning about assertWarns
+            # pylint: disable=no-member
+            with self.assertWarns(RuntimeWarning):
+                self.device_manager._find_xinput()
+        else:
+            self.device_manager._find_xinput()
+
+        self.assertIsNone(self.device_manager.xinput)
+
+
 
 class HelpersTestCase(TestCase):
     """Test the device manager class."""
