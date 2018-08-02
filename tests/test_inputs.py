@@ -18,6 +18,9 @@ import inputs
 
 RAW = ""
 
+# Mocking adds an argument, whether we need it or not.
+# pylint: disable=unused-argument
+
 
 class InputEventTestCase(TestCase):
     """Test the InputEvent class."""
@@ -437,9 +440,9 @@ class DeviceManagerPlatformTestCase(TestCase):
     def test_find_xinput(self, mock_windll):
         """Finds an xinput library if one is available. """
         self.device_manager._find_xinput()
-        self.assertEqual(
-            'windll.XInput1_4.dll',
-            self.device_manager.xinput._extract_mock_name())
+        found_one = 'windll.XInput1_4.dll' in \
+                    str(self.device_manager.xinput._extract_mock_name())
+        self.assertTrue(found_one)
 
     @mock.patch('inputs.XINPUT_DLL_NAMES')
     @mock.patch('inputs.ctypes.windll',
@@ -459,6 +462,62 @@ class DeviceManagerPlatformTestCase(TestCase):
 
         self.assertIsNone(self.device_manager.xinput)
 
+    @mock.patch.object(inputs.DeviceManager, '_find_xinput')
+    @mock.patch.object(inputs.DeviceManager, '_detect_gamepads')
+    @mock.patch.object(inputs.DeviceManager, '_count_devices')
+    @mock.patch('inputs.Mouse')
+    @mock.patch('inputs.Keyboard')
+    def test_find_devices_win(self,
+                              mock_keyboard,
+                              mock_mouse,
+                              mock_count_devices,
+                              mock_detect_gamepads,
+                              mock_find_xinput):
+        """It appends a keyboard or mouse object if one exists."""
+        # pylint: disable=too-many-arguments
+        self.device_manager._raw_device_counts = {}
+        self.device_manager._raw_device_counts['keyboards'] = 1
+        self.device_manager._raw_device_counts['mice'] = 1
+        self.device_manager._find_devices_win()
+        self.assertTrue(len(self.device_manager.mice) == 1)
+        self.assertTrue(len(self.device_manager.keyboards) == 1)
+
+    @mock.patch('inputs.GamePad')
+    @mock.patch('inputs.ctypes.windll', create=True)
+    def test_detect_gamepads(self,
+                             mock_windll,
+                             mock_gamepad):
+        """It appends the correct number of gamepads."""
+        self.device_manager.xinput = mock.MagicMock()
+        xinputgetstate = mock.MagicMock(return_value=0)
+        self.device_manager.xinput.attach_mock(
+            xinputgetstate, 'XInputGetState')
+        self.device_manager._detect_gamepads()
+        self.assertEqual(len(self.device_manager.gamepads), 4)
+
+    @mock.patch('inputs.GamePad')
+    @mock.patch('inputs.ctypes.windll', create=True)
+    def test_detect_error_gamepads(self,
+                                   mock_windll,
+                                   mock_gamepad):
+        """It raises an exception if a problem getting gamepad state."""
+        self.device_manager.xinput = mock.MagicMock()
+        xinputgetstate = mock.MagicMock(return_value=1)
+        self.device_manager.xinput.attach_mock(
+            xinputgetstate, 'XInputGetState')
+        with self.assertRaises(RuntimeError):
+            self.device_manager._detect_gamepads()
+        self.assertEqual(len(self.device_manager.gamepads), 0)
+
+    @mock.patch('inputs.ctypes.windll', create=True)
+    def test_count_devices(self, mock_windll):
+        """It should count the attached devices."""
+        self.device_manager._raw_device_counts = {
+            'mice': 0,
+            'keyboards': 0,
+            'otherhid': 0,
+            'unknown': 0}
+        self.device_manager._count_devices()
 
 
 class HelpersTestCase(TestCase):
@@ -531,6 +590,65 @@ class HelpersTestCase(TestCase):
         with self.assertRaises(inputs.UnpluggedError):
             # pylint: disable=pointless-statement
             inputs.get_gamepad()
+
+
+class BaseListenerTestCase(TestCase):
+    """Tests the BaseListener class."""
+
+    def test_init(self):
+        """The listener has type_codes."""
+        pipe = mock.MagicMock()
+        listener = inputs.BaseListener(pipe)
+        self.assertEqual(len(listener.type_codes), 14)
+
+    def test_init_mac(self):
+        """The listener has mac codes."""
+        inputs.MAC = True
+        pipe = mock.MagicMock()
+        listener = inputs.BaseListener(pipe)
+        self.assertEqual(len(listener.mac_codes), 118)
+        inputs.MAC = False
+
+    def test_convert_timeval(self):
+        """Gives particular seconds and microseconds."""
+        pipe = mock.MagicMock()
+        listener = inputs.BaseListener(pipe)
+
+        self.assertEqual(listener._convert_timeval(2000.0002), (2000, 199))
+        self.assertEqual(listener._convert_timeval(100.000002), (100, 1))
+        self.assertEqual(listener._convert_timeval(199.2), (199, 199999))
+        self.assertEqual(listener._convert_timeval(0), (0, 0))
+        self.assertEqual(listener._convert_timeval(100), (100, 0))
+        self.assertEqual(listener._convert_timeval(0.001), (0, 1000))
+
+    def test_get_timeval(self):
+        """Gives seconds and microseconds."""
+        pipe = mock.MagicMock()
+        listener = inputs.BaseListener(pipe)
+        seconds, microseconds = listener.get_timeval()
+        self.assertTrue(seconds > 0)
+        self.assertTrue(microseconds > 0)
+
+    def test_set_timeval(self):
+        """Sets the cached timeval."""
+        pipe = mock.MagicMock()
+        listener = inputs.BaseListener(pipe)
+
+        # We start with no timeval
+        self.assertIsNone(listener.timeval)
+
+        # We update the timeval
+        listener.update_timeval()
+        seconds, microseconds = listener.get_timeval()
+        self.assertTrue(seconds > 0)
+        self.assertTrue(microseconds > 0)
+
+    def test_create_event_object(self):
+        """It should create an evdev object."""
+        pipe = mock.MagicMock()
+        listener = inputs.BaseListener(pipe)
+
+        #  listener.create_event_object() # Get off train.
 
 
 if __name__ == '__main__':
