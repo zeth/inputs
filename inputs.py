@@ -1434,19 +1434,20 @@ class BaseListener(object):  # pylint: disable=useless-object-inheritance
         self.uninstall_handle_input()
 
     @staticmethod
-    def get_timeval():
-        """Get the time and make it into C style timeval."""
-        frac, whole = math.modf(time.time())
+    def _convert_timeval(seconds_since_epoch):
+        """Convert time into C style timeval."""
+        frac, whole = math.modf(seconds_since_epoch)
         microseconds = math.floor(frac * 1000000)
         seconds = math.floor(whole)
         return seconds, microseconds
 
+    def get_timeval(self):
+        """Get the time in seconds and microseconds."""
+        return self._convert_timeval(time.time())
+
     def update_timeval(self):
-        """Get the time and make it into C style timeval."""
-        frac, whole = math.modf(time.time())
-        microseconds = math.floor(frac * 1000000)
-        seconds = math.floor(whole)
-        self.timeval = (seconds, microseconds)
+        """Update the timeval with the current time."""
+        self.timeval = self.get_timeval()
 
     def create_event_object(self,
                             event_type,
