@@ -2010,6 +2010,80 @@ def quartz_mouse_process(pipe):
     mouse.listen()
 
 
+
+class AppKitMouseBaseListener(BaseListener):
+    """Emulate evdev behaviour on the the Mac."""
+    def __init__(self, pipe):
+        super(AppKitMouseBaseListener, self).__init__(pipe)
+
+    def handle_input(self, event):
+        """Process the mouse event."""
+        self.update_timeval()
+        events = []
+        code = event.type()
+        # Deal with buttons
+
+        buttonnumber = event.buttonNumber()
+        # Identify buttons 3,4,5
+        if code in (25, 26):
+            code = code + (buttonnumber * 0.1)
+        # Add buttons to events
+        event_type, event_code, value, scan = self.mouse_codes[code]
+        if event_type == "Key":
+            scan_event, key_event = self.emulate_press(
+                event_code, scan, value, self.timeval)
+            events.append(scan_event)
+            events.append(key_event)
+
+        delta_x = round(event.deltaX())
+        delta_y = round(event.deltaY())
+        delta_z = round(event.deltaZ())
+
+        # Mouse wheel
+        if code == 22:
+            if delta_x:
+                events.append(
+                    self.emulate_wheel(delta_x, 'x', self.timeval))
+            if delta_y:
+                events.append(
+                    self.emulate_wheel(delta_y, 'y', self.timeval))
+            if delta_z:
+                events.append(
+                    self.emulate_wheel(delta_z, 'z', self.timeval))
+        # Other relative mouse movements
+        else:
+            if delta_x:
+                events.append(
+                    self.emulate_rel(0x00,
+                                     delta_x,
+                                     self.timeval))
+            if delta_y:
+                events.append(
+                    self.emulate_rel(0x01,
+                                     delta_y,
+                                     self.timeval))
+            if delta_z:
+                events.append(
+                    self.emulate_rel(0x02,
+                                     delta_z,
+                                     self.timeval))
+
+        # Add in the absolute position of the mouse cursor
+        point = event.locationInWindow()
+        x_pos = round(point.x)
+        y_pos = round(point.y)
+        x_event, y_event = self.emulate_abs(x_pos, y_pos, self.timeval)
+        events.append(x_event)
+        events.append(y_event)
+
+        # End with a sync marker
+        events.append(self.sync_marker(self.timeval))
+
+        # We are done
+        self.write_to_pipe(events)
+
+
+
 def appkit_mouse_process(pipe):
     """Single subprocess for reading mouse events on Mac using older AppKit."""
     # pylint: disable=import-error,too-many-locals
@@ -2062,13 +2136,10 @@ def appkit_mouse_process(pipe):
             NSEvent.addGlobalMonitorForEventsMatchingMask_handler_(
                 mask, self.handler)
 
-    class MacMouseListener(BaseListener):
+    class MacMouseListener(AppKitMouseBaseListener):
         """Loosely emulate Evdev mouse behaviour on the Macs.
         Listen for key events then buffer them in a pipe.
         """
-        def __init__(self, pipe):
-            super(MacMouseListener, self).__init__(pipe)
-
         def install_handle_input(self):
             """Install the hook."""
             self.app = NSApplication.sharedApplication()
@@ -2082,74 +2153,50 @@ def appkit_mouse_process(pipe):
             """Stop the listener on deletion."""
             AppHelper.stopEventLoop()
 
-        def handle_input(self, event):
-            """Process the mouse event."""
-            self.update_timeval()
-            events = []
-            code = event.type()
-            # Deal with buttons
-
-            buttonnumber = event.buttonNumber()
-            # Identify buttons 3,4,5
-            if code in (25, 26):
-                code = code + (buttonnumber * 0.1)
-            # Add buttons to events
-            event_type, event_code, value, scan = self.mouse_codes[code]
-            if event_type == "Key":
-                scan_event, key_event = self.emulate_press(
-                    event_code, scan, value, self.timeval)
-                events.append(scan_event)
-                events.append(key_event)
-
-            delta_x = round(event.deltaX())
-            delta_y = round(event.deltaY())
-            delta_z = round(event.deltaZ())
-
-            # Mouse wheel
-            if code == 22:
-                if delta_x:
-                    events.append(
-                        self.emulate_wheel(delta_x, 'x', self.timeval))
-                if delta_y:
-                    events.append(
-                        self.emulate_wheel(delta_y, 'y', self.timeval))
-                if delta_z:
-                    events.append(
-                        self.emulate_wheel(delta_z, 'z', self.timeval))
-            # Other relative mouse movements
-            else:
-                if delta_x:
-                    events.append(
-                        self.emulate_rel(0x00,
-                                         delta_x,
-                                         self.timeval))
-                if delta_y:
-                    events.append(
-                        self.emulate_rel(0x01,
-                                         delta_y,
-                                         self.timeval))
-                if delta_z:
-                    events.append(
-                        self.emulate_rel(0x02,
-                                         delta_z,
-                                         self.timeval))
-
-            # Add in the absolute position of the mouse cursor
-            point = event.locationInWindow()
-            x_pos = round(point.x)
-            y_pos = round(point.y)
-            x_event, y_event = self.emulate_abs(x_pos, y_pos, self.timeval)
-            events.append(x_event)
-            events.append(y_event)
-
-            # End with a sync marker
-            events.append(self.sync_marker(self.timeval))
-
-            # We are done
-            self.write_to_pipe(events)
 
     # pylint: disable=unused-variable
     mouse = MacMouseListener(pipe)
+
+
+class AppKitKeyboardListener(BaseListener):
+    """Emulate an evdev keyboard on the Mac."""
+    def __init__(self, pipe):
+        super(AppKitKeyboardListener, self).__init__(pipe)
+        self.codes = dict(MAC_EVENT_CODES)
+
+    def handle_input(self, event):
+        """Process they keyboard input."""
+        self.update_timeval()
+        events = []
+        key_code = event.keyCode()
+        if key_code in self.mac_codes:
+            new_code = self.mac_codes[key_code]
+        else:
+            new_code = 0
+        event_type = event.type()
+        if event_type == 10:
+            value = 1
+        elif event_type == 11:
+            value = 0
+        elif event_type == 12:
+            flags = event.modifierFlags()
+            # Note, this may be able to be made more accurate,
+            # i.e. handle two modifier keys at once.
+            if flags == 0x100:
+                value = 0
+            else:
+                value = 1
+        else:
+            value = -1
+        scan_event, key_event = self.emulate_press(
+            new_code, key_code, value, self.timeval)
+
+        events.append(scan_event)
+        events.append(key_event)
+        # End with a sync marker
+        events.append(self.sync_marker(self.timeval))
+        # We are done
+        self.write_to_pipe(events)
 
 
 def mac_keyboard_process(pipe):
@@ -2195,14 +2242,10 @@ def mac_keyboard_process(pipe):
             NSEvent.addGlobalMonitorForEventsMatchingMask_handler_(
                 mask, self.handler)
 
-    class MacKeyboardListener(BaseListener):
+    class MacKeyboardListener(AppKitKeyboardListener):
         """Loosely emulate Evdev keyboard behaviour on the Mac.
         Listen for key events then buffer them in a pipe.
         """
-        def __init__(self, pipe):
-            super(MacKeyboardListener, self).__init__(pipe)
-            self.codes = dict(MAC_EVENT_CODES)
-
         def install_handle_input(self):
             """Install the hook."""
             self.app = NSApplication.sharedApplication()
@@ -2215,40 +2258,6 @@ def mac_keyboard_process(pipe):
         def __del__(self):
             """Stop the listener on deletion."""
             AppHelper.stopEventLoop()
-
-        def handle_input(self, event):
-            """Process they keyboard input."""
-            self.update_timeval()
-            events = []
-            key_code = event.keyCode()
-            if key_code in self.mac_codes:
-                new_code = self.mac_codes[key_code]
-            else:
-                new_code = 0
-            event_type = event.type()
-            if event_type == 10:
-                value = 1
-            elif event_type == 11:
-                value = 0
-            elif event_type == 12:
-                flags = event.modifierFlags()
-                # Note, this may be able to be made more accurate,
-                # i.e. handle two modifier keys at once.
-                if flags == 0x100:
-                    value = 0
-                else:
-                    value = 1
-            else:
-                value = -1
-            scan_event, key_event = self.emulate_press(
-                new_code, key_code, value, self.timeval)
-
-            events.append(scan_event)
-            events.append(key_event)
-            # End with a sync marker
-            events.append(self.sync_marker(self.timeval))
-            # We are done
-            self.write_to_pipe(events)
 
     # pylint: disable=unused-variable
     keyboard = MacKeyboardListener(pipe)
