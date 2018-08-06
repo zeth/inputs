@@ -825,6 +825,82 @@ class BaseListenerTestCase(TestCase):
         y_info = next(inputs.iter_unpack(y_list))
         self.assertEqual(y_info, (100, 1, 3, 1, 246))
 
+class QuartzMouseBaseListenerTestCase(TestCase):
+    """Test the Mac mouse support."""
+    def test_init(self):
+        """The created object has properties."""
+        pipe = mock.MagicMock()
+        listener = inputs.QuartzMouseBaseListener(pipe)
+        self.assertTrue(listener.active)
+        self.assertEqual(
+            listener.codes[1],
+            ('Key', 272, 1, 589825))
+
+    @mock.patch.object(
+        inputs.QuartzMouseBaseListener,
+        '_get_mouse_button_number',
+        return_value=1)
+    @mock.patch.object(
+        inputs.QuartzMouseBaseListener,
+        '_get_click_state',
+        return_value=1)
+    def test_handle_button(self,
+                           mock_get_mouse_button_number,
+                           mock_get_click_state):
+        """Convert quartz events to evdev events."""
+        pipe = mock.MagicMock()
+        listener = inputs.QuartzMouseBaseListener(pipe)
+
+        # We begin with no events
+        self.assertEqual(listener.events, [])
+        event = mock.MagicMock()
+        listener.handle_button(event, 3)
+        # Now there are three events
+        self.assertEqual(len(listener.events), 3)
+
+        first_event = next(inputs.iter_unpack(
+            listener.events[0]))
+        self.assertEqual(first_event[2:], (4, 4, 589826))
+        second_event = next(inputs.iter_unpack(
+            listener.events[1]))
+        self.assertEqual(second_event[2:], (1, 273, 1))
+        third_event = next(inputs.iter_unpack(
+            listener.events[2]))
+        self.assertEqual(third_event[2:], (20, 2, 1))
+
+
+    @mock.patch.object(
+        inputs.QuartzMouseBaseListener,
+        '_get_mouse_button_number',
+        return_value=2)
+    @mock.patch.object(
+        inputs.QuartzMouseBaseListener,
+        '_get_click_state',
+        return_value=1)
+    def test_handle_middle_button(self,
+                                  mock_get_mouse_button_number,
+                                  mock_get_click_state):
+        """Convert quartz events to evdev events."""
+        pipe = mock.MagicMock()
+        listener = inputs.QuartzMouseBaseListener(pipe)
+
+        # We begin with no events
+        self.assertEqual(listener.events, [])
+        event = mock.MagicMock()
+        listener.handle_button(event, 26)
+        # Now there are three events
+        self.assertEqual(len(listener.events), 3)
+
+        first_event = next(inputs.iter_unpack(
+            listener.events[0]))
+        self.assertEqual(first_event[2:], (4, 4, 589827))
+        second_event = next(inputs.iter_unpack(
+            listener.events[1]))
+        self.assertEqual(second_event[2:], (1, 274, 0))
+        third_event = next(inputs.iter_unpack(
+            listener.events[2]))
+        self.assertEqual(third_event[2:], (20, 2, 1))
+
 
 if __name__ == '__main__':
     main()
