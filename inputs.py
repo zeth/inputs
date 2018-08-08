@@ -2013,75 +2013,104 @@ def quartz_mouse_process(pipe):
 
 class AppKitMouseBaseListener(BaseListener):
     """Emulate evdev behaviour on the the Mac."""
-    def __init__(self, pipe):
+    def __init__(self, pipe, free=None):
         super(AppKitMouseBaseListener, self).__init__(pipe)
+        if free:
+            self.events = []
+        self.mouse_codes = dict(MAC_EVENT_CODES)
+
+    @staticmethod
+    def _get_mouse_button_number(event):
+        """Get the button number."""
+        return event.buttonNumber()
+
+    def handle_button(self, event, event_type):
+        """Handle mouse click."""
+        mouse_button_number = self._get_mouse_button_number(event)
+        # Identify buttons 3,4,5
+        if event_type in (25, 26):
+            event_type = event_type + (mouse_button_number * 0.1)
+        # Add buttons to events
+        event_type_name, event_code, value, scan = self.mouse_codes[event_type]
+        if event_type_name == "Key":
+            scan_event, key_event = self.emulate_press(
+                event_code, scan, value, self.timeval)
+            self.events.append(scan_event)
+            self.events.append(key_event)
+
+    def handle_absolute(self, event):
+        """Absolute mouse position on the screen."""
+        point = event.locationInWindow()
+        x_pos = round(point.x)
+        y_pos = round(point.y)
+        x_event, y_event = self.emulate_abs(x_pos, y_pos, self.timeval)
+        self.events.append(x_event)
+        self.events.append(y_event)
+
+    def handle_scrollwheel(self, event):
+        """Make endev from appkit scroll wheel event."""
+        delta_x, delta_y, delta_z = self._get_deltas(event)
+        if delta_x:
+            self.events.append(
+                self.emulate_wheel(delta_x, 'x', self.timeval))
+        if delta_y:
+            self.events.append(
+                self.emulate_wheel(delta_y, 'y', self.timeval))
+        if delta_z:
+            self.events.append(
+                self.emulate_wheel(delta_z, 'z', self.timeval))
+
+    @staticmethod
+    def _get_deltas(event):
+        """Get the changes from the appkit event."""
+        delta_x = round(event.deltaX())
+        delta_y = round(event.deltaY())
+        delta_z = round(event.deltaZ())
+        return delta_x, delta_y, delta_z
+
+    def handle_relative(self, event):
+        """Get the position of the mouse on the screen."""
+        delta_x, delta_y, delta_z = self._get_deltas(event)
+        if delta_x:
+            self.events.append(
+                self.emulate_rel(0x00,
+                                 delta_x,
+                                 self.timeval))
+        if delta_y:
+            self.events.append(
+                self.emulate_rel(0x01,
+                                 delta_y,
+                                 self.timeval))
+        if delta_z:
+            self.events.append(
+                self.emulate_rel(0x02,
+                                 delta_z,
+                                 self.timeval))
 
     def handle_input(self, event):
         """Process the mouse event."""
         self.update_timeval()
         events = []
         code = event.type()
+
         # Deal with buttons
-
-        buttonnumber = event.buttonNumber()
-        # Identify buttons 3,4,5
-        if code in (25, 26):
-            code = code + (buttonnumber * 0.1)
-        # Add buttons to events
-        event_type, event_code, value, scan = self.mouse_codes[code]
-        if event_type == "Key":
-            scan_event, key_event = self.emulate_press(
-                event_code, scan, value, self.timeval)
-            events.append(scan_event)
-            events.append(key_event)
-
-        delta_x = round(event.deltaX())
-        delta_y = round(event.deltaY())
-        delta_z = round(event.deltaZ())
+        self.handle_button(event, code)
 
         # Mouse wheel
         if code == 22:
-            if delta_x:
-                events.append(
-                    self.emulate_wheel(delta_x, 'x', self.timeval))
-            if delta_y:
-                events.append(
-                    self.emulate_wheel(delta_y, 'y', self.timeval))
-            if delta_z:
-                events.append(
-                    self.emulate_wheel(delta_z, 'z', self.timeval))
+            self.handle_scrollwheel(event)
         # Other relative mouse movements
         else:
-            if delta_x:
-                events.append(
-                    self.emulate_rel(0x00,
-                                     delta_x,
-                                     self.timeval))
-            if delta_y:
-                events.append(
-                    self.emulate_rel(0x01,
-                                     delta_y,
-                                     self.timeval))
-            if delta_z:
-                events.append(
-                    self.emulate_rel(0x02,
-                                     delta_z,
-                                     self.timeval))
+            self.handle_relative(event)
 
         # Add in the absolute position of the mouse cursor
-        point = event.locationInWindow()
-        x_pos = round(point.x)
-        y_pos = round(point.y)
-        x_event, y_event = self.emulate_abs(x_pos, y_pos, self.timeval)
-        events.append(x_event)
-        events.append(y_event)
+        self.handle_absolute(event)
 
         # End with a sync marker
         events.append(self.sync_marker(self.timeval))
 
         # We are done
-        self.write_to_pipe(events)
-
+        self.write_to_pipe(self.events)
 
 
 def appkit_mouse_process(pipe):
@@ -2118,7 +2147,6 @@ def appkit_mouse_process(pipe):
             # pylint: disable=self-cls-assignment
             self = super(MacMouseSetup, self).init()
             self.handler = handler
-
             # Unlike Python's __init__, initializers MUST return self,
             # because they are allowed to return any object!
             return self
@@ -2142,6 +2170,7 @@ def appkit_mouse_process(pipe):
         """
         def install_handle_input(self):
             """Install the hook."""
+            self.events = []
             self.app = NSApplication.sharedApplication()
             # pylint: disable=no-member
             delegate = MacMouseSetup.alloc().init_with_handler(

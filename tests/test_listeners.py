@@ -536,3 +536,28 @@ class QuartzMouseBaseListenerTestCase(TestCase):
         first_event = next(inputs.iter_unpack(
             listener.events[0]))
         self.assertEqual(first_event[2:], (0, 0, 0))
+
+
+class AppKitMouseBaseListenerTestCase(TestCase):
+    """Test the Mac mouse support."""
+    def test_init(self):
+        """The created object has properties."""
+        pipe = mock.MagicMock()
+        listener = inputs.AppKitMouseBaseListener(pipe, True)
+
+    def test_handle_input(self):
+        """The mouse event is processed."""
+        pass
+
+    @mock.patch.object(
+        inputs.AppKitMouseBaseListener,
+        '_get_mouse_button_number',
+        return_value=2)
+    def test_handle_button(self, mock_get_mouse_button_number):
+        """Mouse click produces an event."""
+        pipe = mock.MagicMock()
+        listener = inputs.AppKitMouseBaseListener(pipe, True)
+        # Events begin empty
+        self.assertEqual(listener.events, [])
+        event = mock.MagicMock(return_value=1)
+        listener.handle_button(event, 25)
