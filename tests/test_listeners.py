@@ -4,13 +4,21 @@ from unittest import TestCase
 
 import inputs
 
-from tests.constants import mock
-
+from tests.constants import mock, PYTHON
+if PYTHON == 3:
+    mock._magics.add('__round__')
 
 RAW = ""
 
 # Mocking adds an argument, whether we need it or not.
 # pylint: disable=unused-argument
+
+
+class MockPoint(object):
+    """A pretend AppKit point object."""
+    # pylint: disable=too-few-public-methods
+    x = 600
+    y = 400
 
 
 class BaseListenerTestCase(TestCase):
@@ -544,10 +552,52 @@ class AppKitMouseBaseListenerTestCase(TestCase):
         """The created object has properties."""
         pipe = mock.MagicMock()
         listener = inputs.AppKitMouseBaseListener(pipe, True)
+        self.assertEqual(listener.events, [])
+        self.assertEqual(listener.mouse_codes[1][0], 'Key')
 
-    def test_handle_input(self):
-        """The mouse event is processed."""
-        pass
+    def test_get_mouse_button_number(self):
+        """Get mouse number calls buttonNumber method."""
+        pipe = mock.MagicMock()
+        listener = inputs.AppKitMouseBaseListener(pipe, True)
+        event = mock.MagicMock()
+        button_number = listener._get_mouse_button_number(event)
+        call = event.method_calls[0]
+        self.assertEqual(call[0], 'buttonNumber')
+        button_number.assert_not_called()
+
+    def test_get_absolute(self):
+        """Get absolute calls locationInWindow method."""
+        pipe = mock.MagicMock()
+        listener = inputs.AppKitMouseBaseListener(pipe, True)
+        event = mock.MagicMock()
+        button_number = listener._get_absolute(event)
+        call = event.method_calls[0]
+        self.assertEqual(call[0], 'locationInWindow')
+        button_number.assert_not_called()
+
+    def test_get_deltas(self):
+        """Get deltas calls delta methods."""
+        pipe = mock.MagicMock()
+        listener = inputs.AppKitMouseBaseListener(pipe, True)
+        event = mock.MagicMock()
+        button_number = listener._get_deltas(event)
+        self.assertEqual(len(button_number), 3)
+
+        # Check the three method names were called.
+        cartesian = ('X', 'Y', 'Z')
+        for index, call in enumerate(event.method_calls):
+            method_name = 'delta' + cartesian[index]
+            self.assertEqual(call[0], method_name)
+
+    def test_get_event_type(self):
+        """Get event type called type()."""
+        pipe = mock.MagicMock()
+        listener = inputs.AppKitMouseBaseListener(pipe, True)
+        event = mock.MagicMock()
+        event_type = listener._get_event_type(event)
+        call = event.method_calls[0]
+        self.assertEqual(call[0], 'type')
+        event_type.assert_not_called()
 
     @mock.patch.object(
         inputs.AppKitMouseBaseListener,
@@ -561,3 +611,187 @@ class AppKitMouseBaseListenerTestCase(TestCase):
         self.assertEqual(listener.events, [])
         event = mock.MagicMock(return_value=1)
         listener.handle_button(event, 25)
+        self.assertEqual(len(listener.events), 2)
+        first_event = next(inputs.iter_unpack(
+            listener.events[0]))
+        self.assertEqual(first_event[2:], (4, 4, 589827))
+        second_event = next(inputs.iter_unpack(
+            listener.events[1]))
+        self.assertEqual(second_event[2:], (1, 274, 1))
+
+    @mock.patch.object(
+        inputs.AppKitMouseBaseListener,
+        '_get_absolute',
+        return_value=MockPoint())
+    def test_handle_absolute(self,
+                             mock_get_absolute):
+        """Absolute mouse event is processed."""
+        pipe = mock.MagicMock()
+        listener = inputs.AppKitMouseBaseListener(pipe, True)
+        # Events begin empty
+        self.assertEqual(listener.events, [])
+
+        event = mock.MagicMock()
+        # Run the method under test
+        listener.handle_absolute(event)
+
+        # Check that we have events
+        self.assertEqual(len(listener.events), 2)
+
+        first_event = next(inputs.iter_unpack(
+            listener.events[0]))
+        self.assertEqual(first_event[2:], (3, 0, 600))
+
+        second_event = next(inputs.iter_unpack(
+            listener.events[1]))
+        self.assertEqual(second_event[2:], (3, 1, 400))
+
+        mock_get_absolute.assert_called_once_with(event)
+
+    @mock.patch.object(
+        inputs.AppKitMouseBaseListener,
+        '_get_deltas',
+        return_value=(5, 5, 5))
+    def test_handle_scrollwheel(self,
+                                mock_get_deltas):
+        """Scroll wheel event is processed."""
+        pipe = mock.MagicMock()
+        listener = inputs.AppKitMouseBaseListener(pipe, True)
+        # Events begin empty
+        self.assertEqual(listener.events, [])
+
+        event = mock.MagicMock()
+        # Run the method under test
+        listener.handle_scrollwheel(event)
+
+        # Check that we have events
+        self.assertEqual(len(listener.events), 3)
+
+        first_event = next(inputs.iter_unpack(
+            listener.events[0]))
+        self.assertEqual(first_event[2:], (2, 6, 5))
+
+        second_event = next(inputs.iter_unpack(
+            listener.events[1]))
+        self.assertEqual(second_event[2:], (2, 8, 5))
+
+        third_event = next(inputs.iter_unpack(
+            listener.events[2]))
+        self.assertEqual(third_event[2:], (2, 7, 5))
+
+        mock_get_deltas.assert_called_once_with(event)
+
+    @mock.patch.object(
+        inputs.AppKitMouseBaseListener,
+        '_get_deltas',
+        return_value=(5, 5, 5))
+    def test_handle_relative(self,
+                             mock_get_deltas):
+        """Relative position is processed."""
+        pipe = mock.MagicMock()
+        listener = inputs.AppKitMouseBaseListener(pipe, True)
+        # Events begin empty
+        self.assertEqual(listener.events, [])
+
+        event = mock.MagicMock()
+        # Run the method under test
+        listener.handle_relative(event)
+
+        # Check that we have events
+        self.assertEqual(len(listener.events), 3)
+
+        first_event = next(inputs.iter_unpack(
+            listener.events[0]))
+        self.assertEqual(first_event[2:], (2, 0, 5))
+
+        second_event = next(inputs.iter_unpack(
+            listener.events[1]))
+        self.assertEqual(second_event[2:], (2, 1, 5))
+
+        third_event = next(inputs.iter_unpack(
+            listener.events[2]))
+        self.assertEqual(third_event[2:], (2, 2, 5))
+
+        mock_get_deltas.assert_called_once_with(event)
+
+    @mock.patch.object(
+        inputs.AppKitMouseBaseListener,
+        'write_to_pipe')
+    @mock.patch.object(
+        inputs.AppKitMouseBaseListener,
+        'handle_button')
+    @mock.patch.object(
+        inputs.AppKitMouseBaseListener,
+        'handle_scrollwheel')
+    @mock.patch.object(
+        inputs.AppKitMouseBaseListener,
+        '_get_event_type',
+        return_value=22)
+    @mock.patch.object(
+        inputs.AppKitMouseBaseListener,
+        'handle_absolute')
+    def test_handle_input_with_scroll(self,
+                                      mock_handle_absolute,
+                                      mock_get_event_type,
+                                      mock_handle_scrollwheel,
+                                      mock_handle_button,
+                                      mock_write_to_pipe):
+        """Mouse events are processed."""
+        # pylint: disable=too-many-arguments
+
+        pipe = mock.MagicMock()
+        listener = inputs.AppKitMouseBaseListener(pipe, True)
+
+        event = mock.MagicMock()
+        event_type = mock.MagicMock()
+        event.attach_mock(event_type, 'type')
+
+        # Run the method under test
+        listener.handle_input(event)
+
+        # Check that the methods were called
+        mock_get_event_type.assert_called_once_with(event)
+        mock_handle_button.assert_called_once_with(event, 22)
+        mock_handle_absolute.assert_called_once_with(event)
+        mock_write_to_pipe.assert_called_once()
+
+    @mock.patch.object(
+        inputs.AppKitMouseBaseListener,
+        'write_to_pipe')
+    @mock.patch.object(
+        inputs.AppKitMouseBaseListener,
+        'handle_button')
+    @mock.patch.object(
+        inputs.AppKitMouseBaseListener,
+        '_get_event_type',
+        return_value=1)
+    @mock.patch.object(
+        inputs.AppKitMouseBaseListener,
+        'handle_relative')
+    @mock.patch.object(
+        inputs.AppKitMouseBaseListener,
+        'handle_absolute')
+    def test_handle_input_relative(self,
+                                   mock_handle_absolute,
+                                   mock_handle_relative,
+                                   mock_handle_get_event_type,
+                                   mock_handle_button,
+                                   mock_write_to_pipe):
+        """Mouse events are processed."""
+        # pylint: disable=too-many-arguments
+        pipe = mock.MagicMock()
+        listener = inputs.AppKitMouseBaseListener(pipe, True)
+
+        event = mock.MagicMock()
+        event_type = mock.MagicMock()
+        event.attach_mock(event_type, 'type')
+
+        # Run the method under test
+        listener.handle_input(event)
+
+        # Check that the methods were called
+        mock_handle_get_event_type.assert_called_once_with(event)
+        mock_handle_button.assert_called_once_with(event, 1)
+        mock_handle_relative.assert_called_once_with(event)
+        mock_handle_absolute.assert_called_once_with(event)
+        mock_write_to_pipe.assert_called_once()

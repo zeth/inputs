@@ -2010,12 +2010,12 @@ def quartz_mouse_process(pipe):
     mouse.listen()
 
 
-
 class AppKitMouseBaseListener(BaseListener):
     """Emulate evdev behaviour on the the Mac."""
     def __init__(self, pipe, free=None):
         super(AppKitMouseBaseListener, self).__init__(pipe)
         if free:
+            # event should be an argument!
             self.events = []
         self.mouse_codes = dict(MAC_EVENT_CODES)
 
@@ -2023,6 +2023,24 @@ class AppKitMouseBaseListener(BaseListener):
     def _get_mouse_button_number(event):
         """Get the button number."""
         return event.buttonNumber()
+
+    @staticmethod
+    def _get_absolute(event):
+        """Get the absolute (pixel) location of the mouse cursor."""
+        return event.locationInWindow()
+
+    @staticmethod
+    def _get_event_type(event):
+        """Get the appkit event type of the event."""
+        return event.type()
+
+    @staticmethod
+    def _get_deltas(event):
+        """Get the changes from the appkit event."""
+        delta_x = round(event.deltaX())
+        delta_y = round(event.deltaY())
+        delta_z = round(event.deltaZ())
+        return delta_x, delta_y, delta_z
 
     def handle_button(self, event, event_type):
         """Handle mouse click."""
@@ -2040,7 +2058,7 @@ class AppKitMouseBaseListener(BaseListener):
 
     def handle_absolute(self, event):
         """Absolute mouse position on the screen."""
-        point = event.locationInWindow()
+        point = self._get_absolute(event)
         x_pos = round(point.x)
         y_pos = round(point.y)
         x_event, y_event = self.emulate_abs(x_pos, y_pos, self.timeval)
@@ -2059,14 +2077,6 @@ class AppKitMouseBaseListener(BaseListener):
         if delta_z:
             self.events.append(
                 self.emulate_wheel(delta_z, 'z', self.timeval))
-
-    @staticmethod
-    def _get_deltas(event):
-        """Get the changes from the appkit event."""
-        delta_x = round(event.deltaX())
-        delta_y = round(event.deltaY())
-        delta_z = round(event.deltaZ())
-        return delta_x, delta_y, delta_z
 
     def handle_relative(self, event):
         """Get the position of the mouse on the screen."""
@@ -2091,7 +2101,7 @@ class AppKitMouseBaseListener(BaseListener):
         """Process the mouse event."""
         self.update_timeval()
         events = []
-        code = event.type()
+        code = self._get_event_type(event)
 
         # Deal with buttons
         self.handle_button(event, code)
@@ -2181,7 +2191,6 @@ def appkit_mouse_process(pipe):
         def __del__(self):
             """Stop the listener on deletion."""
             AppHelper.stopEventLoop()
-
 
     # pylint: disable=unused-variable
     mouse = MacMouseListener(pipe)
@@ -2309,7 +2318,11 @@ class InputDevice(object):  # pylint: disable=useless-object-inheritance
         else:
             self._set_device_path()
         # We should by now have a device_path
-        if not self._device_path:
+
+        try:
+            if not self._device_path:
+                raise NoDevicePath
+        except AttributeError:
             raise NoDevicePath
 
         self.protocol, _, self.device_type = self._get_path_infomation()
@@ -2406,6 +2419,7 @@ class InputDevice(object):  # pylint: disable=useless-object-inheritance
 
     # pylint: disable=too-many-arguments
     def _make_event(self, tv_sec, tv_usec, ev_type, code, value):
+        """Emulate an evdev event e.g. on Windows."""
         event_type = self.manager.get_event_type(ev_type)
         eventinfo = {
             "ev_type": event_type,

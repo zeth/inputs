@@ -1,10 +1,10 @@
 """Tests for inputs module."""
 # pylint: disable=protected-access,no-self-use
-from unittest import TestCase, main
+from unittest import TestCase
 
 import inputs
 
-from tests.constants import mock, PYTHON
+from tests.constants import mock
 
 RAW = ""
 
