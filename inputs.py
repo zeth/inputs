@@ -1406,20 +1406,17 @@ class BaseListener(object):  # pylint: disable=useless-object-inheritance
     them in a pipe.
     """
 
-    def __init__(self, pipe, events=None):
+    def __init__(self, pipe, events=None, codes=None):
         self.pipe = pipe
         self.events = events if events else []
-
+        self.codes = codes if codes else None
         self.app = None
         self.timeval = None
         self.type_codes = dict((
             (value, key)
             for key, value in EVENT_TYPES))
 
-        if MAC:
-            self.mouse_codes = dict(MAC_EVENT_CODES)
-        if not getattr(self, "codes", None):
-            self.codes = None
+
         self.install_handle_input()
 
     def install_handle_input(self):
@@ -1582,11 +1579,11 @@ class WindowsKeyboardListener(BaseListener):
     """Loosely emulate Evdev keyboard behaviour on Windows.  Listen (hook
     in Windows terminology) for key events then buffer them in a pipe.
     """
-    def __init__(self, pipe):
+    def __init__(self, pipe, codes=None):
         self.pipe = pipe
         self.hooked = None
         self.pointer = None
-        super(WindowsKeyboardListener, self).__init__(pipe)
+        super(WindowsKeyboardListener, self).__init__(pipe, codes)
 
     @staticmethod
     def listen():
@@ -1803,10 +1800,11 @@ def mouse_process(pipe):
 class QuartzMouseBaseListener(BaseListener):
     """Emulate evdev mouse behaviour on mac."""
     def __init__(self, pipe):
-        super(QuartzMouseBaseListener, self).__init__(pipe)
+        super(QuartzMouseBaseListener, self).__init__(
+            pipe,
+            codes=dict(MAC_EVENT_CODES))
         self.active = True
         self.events = []
-        self.codes = dict(MAC_EVENT_CODES)
 
     def _get_mouse_button_number(self, event):
         """Get the mouse button number from an event."""
@@ -2014,8 +2012,8 @@ def quartz_mouse_process(pipe):
 class AppKitMouseBaseListener(BaseListener):
     """Emulate evdev behaviour on the the Mac."""
     def __init__(self, pipe, events=None):
-        super(AppKitMouseBaseListener, self).__init__(pipe, events)
-        self.codes = dict(MAC_EVENT_CODES)
+        super(AppKitMouseBaseListener, self).__init__(
+            pipe, events, codes=dict(MAC_EVENT_CODES))
 
     @staticmethod
     def _get_mouse_button_number(event):
@@ -2196,8 +2194,8 @@ def appkit_mouse_process(pipe):
 class AppKitKeyboardListener(BaseListener):
     """Emulate an evdev keyboard on the Mac."""
     def __init__(self, pipe):
-        super(AppKitKeyboardListener, self).__init__(pipe)
-        self.codes = dict(MAC_KEYS)
+        super(AppKitKeyboardListener, self).__init__(
+            pipe, codes=dict(MAC_KEYS))
 
     def handle_input(self, event):
         """Process they keyboard input."""
