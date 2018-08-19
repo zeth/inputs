@@ -1416,7 +1416,6 @@ class BaseListener(object):  # pylint: disable=useless-object-inheritance
             (value, key)
             for key, value in EVENT_TYPES))
 
-
         self.install_handle_input()
 
     def install_handle_input(self):
