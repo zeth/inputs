@@ -2095,7 +2095,7 @@ class AppKitMouseBaseListener(BaseListener):
     def handle_input(self, event):
         """Process the mouse event."""
         self.update_timeval()
-        events = []
+        self.events = []
         code = self._get_event_type(event)
 
         # Deal with buttons
@@ -2112,7 +2112,7 @@ class AppKitMouseBaseListener(BaseListener):
         self.handle_absolute(event)
 
         # End with a sync marker
-        events.append(self.sync_marker(self.timeval))
+        self.events.append(self.sync_marker(self.timeval))
 
         # We are done
         self.write_to_pipe(self.events)
