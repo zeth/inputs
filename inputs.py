@@ -1417,7 +1417,6 @@ class BaseListener(object):  # pylint: disable=useless-object-inheritance
             for key, value in EVENT_TYPES))
 
         if MAC:
-            self.mac_codes = dict(MAC_KEYS)
             self.mouse_codes = dict(MAC_EVENT_CODES)
         if not getattr(self, "codes", None):
             self.codes = None
@@ -2016,7 +2015,7 @@ class AppKitMouseBaseListener(BaseListener):
     """Emulate evdev behaviour on the the Mac."""
     def __init__(self, pipe, events=None):
         super(AppKitMouseBaseListener, self).__init__(pipe, events)
-        self.mouse_codes = dict(MAC_EVENT_CODES)
+        self.codes = dict(MAC_EVENT_CODES)
 
     @staticmethod
     def _get_mouse_button_number(event):
@@ -2048,7 +2047,7 @@ class AppKitMouseBaseListener(BaseListener):
         if event_type in (25, 26):
             event_type = event_type + (mouse_button_number * 0.1)
         # Add buttons to events
-        event_type_name, event_code, value, scan = self.mouse_codes[event_type]
+        event_type_name, event_code, value, scan = self.codes[event_type]
         if event_type_name == "Key":
             scan_event, key_event = self.emulate_press(
                 event_code, scan, value, self.timeval)
@@ -2198,15 +2197,15 @@ class AppKitKeyboardListener(BaseListener):
     """Emulate an evdev keyboard on the Mac."""
     def __init__(self, pipe):
         super(AppKitKeyboardListener, self).__init__(pipe)
-        self.codes = dict(MAC_EVENT_CODES)
+        self.codes = dict(MAC_KEYS)
 
     def handle_input(self, event):
         """Process they keyboard input."""
         self.update_timeval()
         events = []
         key_code = event.keyCode()
-        if key_code in self.mac_codes:
-            new_code = self.mac_codes[key_code]
+        if key_code in self.codes:
+            new_code = self.codes[key_code]
         else:
             new_code = 0
         event_type = event.type()

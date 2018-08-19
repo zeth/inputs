@@ -30,14 +30,6 @@ class BaseListenerTestCase(TestCase):
         listener = inputs.BaseListener(pipe)
         self.assertEqual(len(listener.type_codes), 14)
 
-    def test_init_mac(self):
-        """The listener has mac codes."""
-        inputs.MAC = True
-        pipe = mock.MagicMock()
-        listener = inputs.BaseListener(pipe)
-        self.assertEqual(len(listener.mac_codes), 118)
-        inputs.MAC = False
-
     def test_convert_timeval(self):
         """Gives particular seconds and microseconds."""
         pipe = mock.MagicMock()
@@ -553,7 +545,7 @@ class AppKitMouseBaseListenerTestCase(TestCase):
         pipe = mock.MagicMock()
         listener = inputs.AppKitMouseBaseListener(pipe)
         self.assertEqual(listener.events, [])
-        self.assertEqual(listener.mouse_codes[1][0], 'Key')
+        self.assertEqual(listener.codes[1][0], 'Key')
 
     def test_get_mouse_button_number(self):
         """Get mouse number calls buttonNumber method."""
