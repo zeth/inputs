@@ -16,7 +16,7 @@ RAW = ""
 
 class MockPoint(object):
     """A pretend AppKit point object."""
-    # pylint: disable=too-few-public-methods
+    # pylint: disable=too-few-public-methods,invalid-name
     x = 600
     y = 400
 
@@ -551,14 +551,14 @@ class AppKitMouseBaseListenerTestCase(TestCase):
     def test_init(self):
         """The created object has properties."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitMouseBaseListener(pipe, True)
+        listener = inputs.AppKitMouseBaseListener(pipe)
         self.assertEqual(listener.events, [])
         self.assertEqual(listener.mouse_codes[1][0], 'Key')
 
     def test_get_mouse_button_number(self):
         """Get mouse number calls buttonNumber method."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitMouseBaseListener(pipe, True)
+        listener = inputs.AppKitMouseBaseListener(pipe)
         event = mock.MagicMock()
         button_number = listener._get_mouse_button_number(event)
         call = event.method_calls[0]
@@ -568,7 +568,7 @@ class AppKitMouseBaseListenerTestCase(TestCase):
     def test_get_absolute(self):
         """Get absolute calls locationInWindow method."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitMouseBaseListener(pipe, True)
+        listener = inputs.AppKitMouseBaseListener(pipe)
         event = mock.MagicMock()
         button_number = listener._get_absolute(event)
         call = event.method_calls[0]
@@ -578,7 +578,7 @@ class AppKitMouseBaseListenerTestCase(TestCase):
     def test_get_deltas(self):
         """Get deltas calls delta methods."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitMouseBaseListener(pipe, True)
+        listener = inputs.AppKitMouseBaseListener(pipe)
         event = mock.MagicMock()
         button_number = listener._get_deltas(event)
         self.assertEqual(len(button_number), 3)
@@ -592,7 +592,7 @@ class AppKitMouseBaseListenerTestCase(TestCase):
     def test_get_event_type(self):
         """Get event type called type()."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitMouseBaseListener(pipe, True)
+        listener = inputs.AppKitMouseBaseListener(pipe)
         event = mock.MagicMock()
         event_type = listener._get_event_type(event)
         call = event.method_calls[0]
@@ -606,7 +606,7 @@ class AppKitMouseBaseListenerTestCase(TestCase):
     def test_handle_button(self, mock_get_mouse_button_number):
         """Mouse click produces an event."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitMouseBaseListener(pipe, True)
+        listener = inputs.AppKitMouseBaseListener(pipe)
         # Events begin empty
         self.assertEqual(listener.events, [])
         event = mock.MagicMock(return_value=1)
@@ -627,7 +627,7 @@ class AppKitMouseBaseListenerTestCase(TestCase):
                              mock_get_absolute):
         """Absolute mouse event is processed."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitMouseBaseListener(pipe, True)
+        listener = inputs.AppKitMouseBaseListener(pipe)
         # Events begin empty
         self.assertEqual(listener.events, [])
 
@@ -656,7 +656,7 @@ class AppKitMouseBaseListenerTestCase(TestCase):
                                 mock_get_deltas):
         """Scroll wheel event is processed."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitMouseBaseListener(pipe, True)
+        listener = inputs.AppKitMouseBaseListener(pipe)
         # Events begin empty
         self.assertEqual(listener.events, [])
 
@@ -689,7 +689,7 @@ class AppKitMouseBaseListenerTestCase(TestCase):
                              mock_get_deltas):
         """Relative position is processed."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitMouseBaseListener(pipe, True)
+        listener = inputs.AppKitMouseBaseListener(pipe)
         # Events begin empty
         self.assertEqual(listener.events, [])
 
@@ -740,7 +740,7 @@ class AppKitMouseBaseListenerTestCase(TestCase):
         # pylint: disable=too-many-arguments
 
         pipe = mock.MagicMock()
-        listener = inputs.AppKitMouseBaseListener(pipe, True)
+        listener = inputs.AppKitMouseBaseListener(pipe)
 
         event = mock.MagicMock()
         event_type = mock.MagicMock()
@@ -780,7 +780,7 @@ class AppKitMouseBaseListenerTestCase(TestCase):
         """Mouse events are processed."""
         # pylint: disable=too-many-arguments
         pipe = mock.MagicMock()
-        listener = inputs.AppKitMouseBaseListener(pipe, True)
+        listener = inputs.AppKitMouseBaseListener(pipe)
 
         event = mock.MagicMock()
         event_type = mock.MagicMock()

@@ -1406,8 +1406,10 @@ class BaseListener(object):  # pylint: disable=useless-object-inheritance
     them in a pipe.
     """
 
-    def __init__(self, pipe):
+    def __init__(self, pipe, events=None):
         self.pipe = pipe
+        self.events = events if events else []
+
         self.app = None
         self.timeval = None
         self.type_codes = dict((
@@ -2012,11 +2014,8 @@ def quartz_mouse_process(pipe):
 
 class AppKitMouseBaseListener(BaseListener):
     """Emulate evdev behaviour on the the Mac."""
-    def __init__(self, pipe, free=None):
-        super(AppKitMouseBaseListener, self).__init__(pipe)
-        if free:
-            # event should be an argument!
-            self.events = []
+    def __init__(self, pipe, events=None):
+        super(AppKitMouseBaseListener, self).__init__(pipe, events)
         self.mouse_codes = dict(MAC_EVENT_CODES)
 
     @staticmethod
@@ -2180,7 +2179,6 @@ def appkit_mouse_process(pipe):
         """
         def install_handle_input(self):
             """Install the hook."""
-            self.events = []
             self.app = NSApplication.sharedApplication()
             # pylint: disable=no-member
             delegate = MacMouseSetup.alloc().init_with_handler(
@@ -2193,7 +2191,7 @@ def appkit_mouse_process(pipe):
             AppHelper.stopEventLoop()
 
     # pylint: disable=unused-variable
-    mouse = MacMouseListener(pipe)
+    mouse = MacMouseListener(pipe, events=[])
 
 
 class AppKitKeyboardListener(BaseListener):
