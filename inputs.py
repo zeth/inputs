@@ -79,6 +79,12 @@ else:
 
 OLD = sys.version_info < (3, 4)
 
+PERMISSIONS_ERROR_TEXT = (
+    "The user (that this program is being run as) does "
+    "not have permission to access the input events, "
+    "check groups and permissions, for example, on "
+    "Debian, the user needs to be in the input group.")
+
 # Standard event format for most devices.
 # long, long, unsigned short, unsigned short, int
 EVENT_FORMAT = str('llHHi')
@@ -1265,6 +1271,12 @@ EVENT_MAP = (
     ('Max', MAX),
     ('Current', CURRENT))
 
+# Evdev style paths for the Mac
+
+APPKIT_KB_PATH = "/dev/input/by-id/usb-AppKit_Keyboard-event-kbd"
+QUARTZ_MOUSE_PATH = "/dev/input/by-id/usb-Quartz_Mouse-event-mouse"
+APPKIT_MOUSE_PATH = "/dev/input/by-id/usb-AppKit_Mouse-event-mouse"
+
 
 # Now comes all the structs we need to parse the infomation coming
 # from Windows.
@@ -1355,14 +1367,21 @@ class XinputVibration(ctypes.Structure):
                 ("wRightMotorSpeed", ctypes.c_ushort)]
 
 
-class PermissionDenied(IOError):
-    """/dev/input not allowed by user.
-    Common Linux problem."""
-    pass
+if sys.version_info.major == 2:
+    # pylint: disable=redefined-builtin
+    class PermissionError(IOError):
+        """Raised when trying to run an operation without the adequate access
+        rights - for example filesystem permissions. Corresponds to errno
+        EACCES and EPERM."""
 
 
 class UnpluggedError(RuntimeError):
     """The device requested is not plugged in."""
+    pass
+
+
+class NoDevicePath(RuntimeError):
+    """No evdev device path was given."""
     pass
 
 
@@ -1395,19 +1414,16 @@ class BaseListener(object):  # pylint: disable=useless-object-inheritance
     them in a pipe.
     """
 
-    def __init__(self, pipe):
+    def __init__(self, pipe, events=None, codes=None):
         self.pipe = pipe
+        self.events = events if events else []
+        self.codes = codes if codes else None
         self.app = None
         self.timeval = None
         self.type_codes = dict((
             (value, key)
             for key, value in EVENT_TYPES))
 
-        if MAC:
-            self.mac_codes = dict(MAC_KEYS)
-            self.mouse_codes = dict(MAC_EVENT_CODES)
-        if not getattr(self, "codes", None):
-            self.codes = None
         self.install_handle_input()
 
     def install_handle_input(self):
@@ -1423,19 +1439,20 @@ class BaseListener(object):  # pylint: disable=useless-object-inheritance
         self.uninstall_handle_input()
 
     @staticmethod
-    def get_timeval():
-        """Get the time and make it into C style timeval."""
-        frac, whole = math.modf(time.time())
+    def _convert_timeval(seconds_since_epoch):
+        """Convert time into C style timeval."""
+        frac, whole = math.modf(seconds_since_epoch)
         microseconds = math.floor(frac * 1000000)
         seconds = math.floor(whole)
         return seconds, microseconds
 
+    def get_timeval(self):
+        """Get the time in seconds and microseconds."""
+        return self._convert_timeval(time.time())
+
     def update_timeval(self):
-        """Get the time and make it into C style timeval."""
-        frac, whole = math.modf(time.time())
-        microseconds = math.floor(frac * 1000000)
-        seconds = math.floor(whole)
-        self.timeval = (seconds, microseconds)
+        """Update the timeval with the current time."""
+        self.timeval = self.get_timeval()
 
     def create_event_object(self,
                             event_type,
@@ -1450,8 +1467,7 @@ class BaseListener(object):  # pylint: disable=useless-object-inheritance
             event_code = self.type_codes[event_type]
         except KeyError:
             raise UnknownEventType(
-                "We don't know what kind of event a %s is.",
-                event_type)
+                "We don't know what kind of event a %s is." % event_type)
 
         event = struct.pack(EVENT_FORMAT,
                             timeval[0],
@@ -1569,11 +1585,11 @@ class WindowsKeyboardListener(BaseListener):
     """Loosely emulate Evdev keyboard behaviour on Windows.  Listen (hook
     in Windows terminology) for key events then buffer them in a pipe.
     """
-    def __init__(self, pipe):
+    def __init__(self, pipe, codes=None):
         self.pipe = pipe
         self.hooked = None
         self.pointer = None
-        super(WindowsKeyboardListener, self).__init__(pipe)
+        super(WindowsKeyboardListener, self).__init__(pipe, codes)
 
     @staticmethod
     def listen():
@@ -1787,6 +1803,123 @@ def mouse_process(pipe):
     mouse.listen()
 
 
+class QuartzMouseBaseListener(BaseListener):
+    """Emulate evdev mouse behaviour on mac."""
+    def __init__(self, pipe):
+        super(QuartzMouseBaseListener, self).__init__(
+            pipe,
+            codes=dict(MAC_EVENT_CODES))
+        self.active = True
+        self.events = []
+
+    def _get_mouse_button_number(self, event):
+        """Get the mouse button number from an event."""
+        raise NotImplementedError
+
+    def _get_click_state(self, event):
+        """The click state from an event."""
+        raise NotImplementedError
+
+    def _get_scroll(self, event):
+        """The scroll values from an event."""
+        raise NotImplementedError
+
+    def _get_absolute(self, event):
+        """Get abolute cursor location."""
+        raise NotImplementedError
+
+    def _get_relative(self, event):
+        """Get the relative mouse movement."""
+        raise NotImplementedError
+
+    def handle_button(self, event, event_type):
+        """Convert the button information from quartz into evdev format."""
+        # 0 for left
+        # 1 for right
+        # 2 for middle/center
+        # 3 for side
+        mouse_button_number = self._get_mouse_button_number(event)
+
+        # Identify buttons 3,4,5
+        if event_type in (25, 26):
+            event_type = event_type + (mouse_button_number * 0.1)
+
+        # Add buttons to events
+        event_type_string, event_code, value, scan = self.codes[event_type]
+        if event_type_string == "Key":
+            scan_event, key_event = self.emulate_press(
+                event_code, scan, value, self.timeval)
+            self.events.append(scan_event)
+            self.events.append(key_event)
+
+        # doubleclick/n-click of button
+        click_state = self._get_click_state(event)
+
+        repeat = self.emulate_repeat(click_state, self.timeval)
+        self.events.append(repeat)
+
+    def handle_scrollwheel(self, event):
+        """Handle the scrollwheel (it is a ball on the mighty mouse)."""
+        # relative Scrollwheel
+        scroll_x, scroll_y = self._get_scroll(event)
+
+        if scroll_x:
+            self.events.append(
+                self.emulate_wheel(scroll_x, 'x', self.timeval))
+
+        if scroll_y:
+            self.events.append(
+                self.emulate_wheel(scroll_y, 'y', self.timeval))
+
+    def handle_absolute(self, event):
+        """Absolute mouse position on the screen."""
+        (x_val, y_val) = self._get_absolute(event)
+        x_event, y_event = self.emulate_abs(
+            int(x_val),
+            int(y_val),
+            self.timeval)
+        self.events.append(x_event)
+        self.events.append(y_event)
+
+    def handle_relative(self, event):
+        """Relative mouse movement."""
+        delta_x, delta_y = self._get_relative(event)
+        if delta_x:
+            self.events.append(
+                self.emulate_rel(0x00,
+                                 delta_x,
+                                 self.timeval))
+        if delta_y:
+            self.events.append(
+                self.emulate_rel(0x01,
+                                 delta_y,
+                                 self.timeval))
+
+    # pylint: disable=unused-argument
+    def handle_input(self, proxy, event_type, event, refcon):
+        """Handle an input event."""
+        self.update_timeval()
+        self.events = []
+
+        if event_type in (1, 2, 3, 4, 25, 26, 27):
+            self.handle_button(event, event_type)
+
+        if event_type == 22:
+            self.handle_scrollwheel(event)
+
+        # Add in the absolute position of the mouse cursor
+        self.handle_absolute(event)
+
+        # Add in the relative position of the mouse cursor
+        self.handle_relative(event)
+
+        # End with a sync marker
+        self.events.append(self.sync_marker(self.timeval))
+
+        # We are done
+        self.write_to_pipe(self.events)
+
+
 def quartz_mouse_process(pipe):
     """Single subprocess for reading mouse events on Mac using newer Quartz."""
     # Quartz only on the mac, so don't warn about Quartz
@@ -1794,16 +1927,10 @@ def quartz_mouse_process(pipe):
     import Quartz
     # pylint: disable=no-member
 
-    class QuartzMouseListener(BaseListener):
+    class QuartzMouseListener(QuartzMouseBaseListener):
         """Loosely emulate Evdev mouse behaviour on the Macs.
         Listen for key events then buffer them in a pipe.
         """
-        def __init__(self, pipe):
-            super(QuartzMouseListener, self).__init__(pipe)
-            self.active = True
-            self.events = []
-            self.codes = dict(MAC_EVENT_CODES)
-
         def install_handle_input(self):
             """Constants below listed at:
             https://developer.apple.com/documentation/coregraphics/
@@ -1854,102 +1981,148 @@ def quartz_mouse_process(pipe):
         def uninstall_handle_input(self):
             self.active = False
 
-        def handle_button(self, event, event_type):
-            """Convert the button information from quartz into evdev format."""
-            # 0 for left
-            # 1 for right
-            # 2 for middle/center
-            # 3 for side
-            mouse_button_number = Quartz.CGEventGetIntegerValueField(
+        def _get_mouse_button_number(self, event):
+            """Get the mouse button number from an event."""
+            return Quartz.CGEventGetIntegerValueField(
                 event, Quartz.kCGMouseEventButtonNumber)
 
-            # Identify buttons 3,4,5
-            if event_type in (25, 26):
-                event_type = event_type + (mouse_button_number * 0.1)
-
-            # Add buttons to events
-            event_type_string, event_code, value, scan = self.codes[event_type]
-            if event_type_string == "Key":
-                scan_event, key_event = self.emulate_press(
-                    event_code, scan, value, self.timeval)
-                self.events.append(scan_event)
-                self.events.append(key_event)
-
-            # doubleclick/n-click of button
-            click_state = Quartz.CGEventGetIntegerValueField(
+        def _get_click_state(self, event):
+            """The click state from an event."""
+            return Quartz.CGEventGetIntegerValueField(
                 event, Quartz.kCGMouseEventClickState)
-            repeat = self.emulate_repeat(click_state, self.timeval)
-            self.events.append(repeat)
 
-        def handle_scrollwheel(self, event):
-            """Handle the scrollwheel (it is a ball on the mighty mouse)."""
-            # relative Scrollwheel
+        def _get_scroll(self, event):
+            """The scroll values from an event."""
             scroll_y = Quartz.CGEventGetIntegerValueField(
                 event, Quartz.kCGScrollWheelEventDeltaAxis1)
             scroll_x = Quartz.CGEventGetIntegerValueField(
                 event, Quartz.kCGScrollWheelEventDeltaAxis2)
+            return scroll_x, scroll_y
 
-            if scroll_x:
-                self.events.append(
-                    self.emulate_wheel(scroll_x, 'x', self.timeval))
+        def _get_absolute(self, event):
+            """Get abolute cursor location."""
+            return Quartz.CGEventGetLocation(event)
 
-            if scroll_y:
-                self.events.append(
-                    self.emulate_wheel(scroll_y, 'y', self.timeval))
-
-        def handle_absolute(self, event):
-            """Absolute mouse position on the screen."""
-            (x_val, y_val) = Quartz.CGEventGetLocation(event)
-            x_event, y_event = self.emulate_abs(
-                int(x_val),
-                int(y_val),
-                self.timeval)
-            self.events.append(x_event)
-            self.events.append(y_event)
-
-        def handle_relative(self, event):
-            """Relative mouse movement."""
+        def _get_relative(self, event):
+            """Get the relative mouse movement."""
             delta_x = Quartz.CGEventGetIntegerValueField(
                 event, Quartz.kCGMouseEventDeltaX)
             delta_y = Quartz.CGEventGetIntegerValueField(
                 event, Quartz.kCGMouseEventDeltaY)
-            if delta_x:
-                self.events.append(
-                    self.emulate_rel(0x00,
-                                     delta_x,
-                                     self.timeval))
-            if delta_y:
-                self.events.append(
-                    self.emulate_rel(0x01,
-                                     delta_y,
-                                     self.timeval))
-
-        # pylint: disable=unused-argument
-        def handle_input(self, proxy, event_type, event, refcon):
-            """Handle an input event."""
-            self.update_timeval()
-            self.events = []
-
-            if event_type in (1, 2, 3, 4, 25, 26, 27):
-                self.handle_button(event, event_type)
-
-            if event_type == 22:
-                self.handle_scrollwheel(event)
-
-            # Add in the absolute position of the mouse cursor
-            self.handle_absolute(event)
-
-            # Add in the relative position of the mouse cursor
-            self.handle_relative(event)
-
-            # End with a sync marker
-            self.events.append(self.sync_marker(self.timeval))
-
-            # We are done
-            self.write_to_pipe(self.events)
+            return delta_x, delta_y
 
     mouse = QuartzMouseListener(pipe)
     mouse.listen()
+
+
+class AppKitMouseBaseListener(BaseListener):
+    """Emulate evdev behaviour on the the Mac."""
+    def __init__(self, pipe, events=None):
+        super(AppKitMouseBaseListener, self).__init__(
+            pipe, events, codes=dict(MAC_EVENT_CODES))
+
+    @staticmethod
+    def _get_mouse_button_number(event):
+        """Get the button number."""
+        return event.buttonNumber()
+
+    @staticmethod
+    def _get_absolute(event):
+        """Get the absolute (pixel) location of the mouse cursor."""
+        return event.locationInWindow()
+
+    @staticmethod
+    def _get_event_type(event):
+        """Get the appkit event type of the event."""
+        return event.type()
+
+    @staticmethod
+    def _get_deltas(event):
+        """Get the changes from the appkit event."""
+        delta_x = round(event.deltaX())
+        delta_y = round(event.deltaY())
+        delta_z = round(event.deltaZ())
+        return delta_x, delta_y, delta_z
+
+    def handle_button(self, event, event_type):
+        """Handle mouse click."""
+        mouse_button_number = self._get_mouse_button_number(event)
+        # Identify buttons 3,4,5
+        if event_type in (25, 26):
+            event_type = event_type + (mouse_button_number * 0.1)
+        # Add buttons to events
+        event_type_name, event_code, value, scan = self.codes[event_type]
+        if event_type_name == "Key":
+            scan_event, key_event = self.emulate_press(
+                event_code, scan, value, self.timeval)
+            self.events.append(scan_event)
+            self.events.append(key_event)
+
+    def handle_absolute(self, event):
+        """Absolute mouse position on the screen."""
+        point = self._get_absolute(event)
+        x_pos = round(point.x)
+        y_pos = round(point.y)
+        x_event, y_event = self.emulate_abs(x_pos, y_pos, self.timeval)
+        self.events.append(x_event)
+        self.events.append(y_event)
+
+    def handle_scrollwheel(self, event):
+        """Make endev from appkit scroll wheel event."""
+        delta_x, delta_y, delta_z = self._get_deltas(event)
+        if delta_x:
+            self.events.append(
+                self.emulate_wheel(delta_x, 'x', self.timeval))
+        if delta_y:
+            self.events.append(
+                self.emulate_wheel(delta_y, 'y', self.timeval))
+        if delta_z:
+            self.events.append(
+                self.emulate_wheel(delta_z, 'z', self.timeval))
+
+    def handle_relative(self, event):
+        """Get the position of the mouse on the screen."""
+        delta_x, delta_y, delta_z = self._get_deltas(event)
+        if delta_x:
+            self.events.append(
+                self.emulate_rel(0x00,
+                                 delta_x,
+                                 self.timeval))
+        if delta_y:
+            self.events.append(
+                self.emulate_rel(0x01,
+                                 delta_y,
+                                 self.timeval))
+        if delta_z:
+            self.events.append(
+                self.emulate_rel(0x02,
+                                 delta_z,
+                                 self.timeval))
+
+    def handle_input(self, event):
+        """Process the mouse event."""
+        self.update_timeval()
+        self.events = []
+        code = self._get_event_type(event)
+
+        # Deal with buttons
+        self.handle_button(event, code)
+
+        # Mouse wheel
+        if code == 22:
+            self.handle_scrollwheel(event)
+        # Other relative mouse movements
+        else:
+            self.handle_relative(event)
+
+        # Add in the absolute position of the mouse cursor
+        self.handle_absolute(event)
+
+        # End with a sync marker
+        self.events.append(self.sync_marker(self.timeval))
+
+        # We are done
+        self.write_to_pipe(self.events)
 
 
 def appkit_mouse_process(pipe):
@@ -1986,7 +2159,6 @@ def appkit_mouse_process(pipe):
             # pylint: disable=self-cls-assignment
             self = super(MacMouseSetup, self).init()
             self.handler = handler
-
             # Unlike Python's __init__, initializers MUST return self,
             # because they are allowed to return any object!
             return self
@@ -2004,13 +2176,10 @@ def appkit_mouse_process(pipe):
             NSEvent.addGlobalMonitorForEventsMatchingMask_handler_(
                 mask, self.handler)
 
-    class MacMouseListener(BaseListener):
+    class MacMouseListener(AppKitMouseBaseListener):
         """Loosely emulate Evdev mouse behaviour on the Macs.
         Listen for key events then buffer them in a pipe.
         """
-        def __init__(self, pipe):
-            super(MacMouseListener, self).__init__(pipe)
-
         def install_handle_input(self):
             """Install the hook."""
             self.app = NSApplication.sharedApplication()
@@ -2024,74 +2193,70 @@ def appkit_mouse_process(pipe):
             """Stop the listener on deletion."""
             AppHelper.stopEventLoop()
 
-        def handle_input(self, event):
-            """Process the mouse event."""
-            self.update_timeval()
-            events = []
-            code = event.type()
-            # Deal with buttons
-
-            buttonnumber = event.buttonNumber()
-            # Identify buttons 3,4,5
-            if code in (25, 26):
-                code = code + (buttonnumber * 0.1)
-            # Add buttons to events
-            event_type, event_code, value, scan = self.mouse_codes[code]
-            if event_type == "Key":
-                scan_event, key_event = self.emulate_press(
-                    event_code, scan, value, self.timeval)
-                events.append(scan_event)
-                events.append(key_event)
-
-            delta_x = round(event.deltaX())
-            delta_y = round(event.deltaY())
-            delta_z = round(event.deltaZ())
-
-            # Mouse wheel
-            if code == 22:
-                if delta_x:
-                    events.append(
-                        self.emulate_wheel(delta_x, 'x', self.timeval))
-                if delta_y:
-                    events.append(
-                        self.emulate_wheel(delta_y, 'y', self.timeval))
-                if delta_z:
-                    events.append(
-                        self.emulate_wheel(delta_z, 'z', self.timeval))
-            # Other relative mouse movements
-            else:
-                if delta_x:
-                    events.append(
-                        self.emulate_rel(0x00,
-                                         delta_x,
-                                         self.timeval))
-                if delta_y:
-                    events.append(
-                        self.emulate_rel(0x01,
-                                         delta_y,
-                                         self.timeval))
-                if delta_z:
-                    events.append(
-                        self.emulate_rel(0x02,
-                                         delta_z,
-                                         self.timeval))
-
-            # Add in the absolute position of the mouse cursor
-            point = event.locationInWindow()
-            x_pos = round(point.x)
-            y_pos = round(point.y)
-            x_event, y_event = self.emulate_abs(x_pos, y_pos, self.timeval)
-            events.append(x_event)
-            events.append(y_event)
-
-            # End with a sync marker
-            events.append(self.sync_marker(self.timeval))
-
-            # We are done
-            self.write_to_pipe(events)
-
     # pylint: disable=unused-variable
-    mouse = MacMouseListener(pipe)
+    mouse = MacMouseListener(pipe, events=[])
+
+
+class AppKitKeyboardListener(BaseListener):
+    """Emulate an evdev keyboard on the Mac."""
+    def __init__(self, pipe):
+        super(AppKitKeyboardListener, self).__init__(
+            pipe, codes=dict(MAC_KEYS))
+
+    @staticmethod
+    def _get_event_key_code(event):
+        """Get the key code."""
+        return event.keyCode()
+
+    @staticmethod
+    def _get_event_type(event):
+        """Get the event type."""
+        return event.type()
+
+    @staticmethod
+    def _get_flag_value(event):
+        """Note, this may be able to be made more accurate,
+            i.e. handle two modifier keys at once."""
+        flags = event.modifierFlags()
+        if flags == 0x100:
+            value = 0
+        else:
+            value = 1
+        return value
+
+    def _get_key_value(self, event, event_type):
+        """Get the key value."""
+        if event_type == 10:
+            value = 1
+        elif event_type == 11:
+            value = 0
+        elif event_type == 12:
+            value = self._get_flag_value(event)
+        else:
+            value = -1
+        return value
+
+    def handle_input(self, event):
+        """Process they keyboard input."""
+        self.update_timeval()
+        self.events = []
+        code = self._get_event_key_code(event)
+
+        if code in self.codes:
+            new_code = self.codes[code]
+        else:
+            new_code = 0
+        event_type = self._get_event_type(event)
+        value = self._get_key_value(event, event_type)
+        scan_event, key_event = self.emulate_press(
+            new_code, code, value, self.timeval)
+
+        self.events.append(scan_event)
+        self.events.append(key_event)
+        # End with a sync marker
+        self.events.append(self.sync_marker(self.timeval))
+        # We are done
+        self.write_to_pipe(self.events)
 
 
 def mac_keyboard_process(pipe):
@@ -2137,14 +2302,10 @@ def mac_keyboard_process(pipe):
             NSEvent.addGlobalMonitorForEventsMatchingMask_handler_(
                 mask, self.handler)
 
-    class MacKeyboardListener(BaseListener):
+    class MacKeyboardListener(AppKitKeyboardListener):
         """Loosely emulate Evdev keyboard behaviour on the Mac.
         Listen for key events then buffer them in a pipe.
         """
-        def __init__(self, pipe):
-            super(MacKeyboardListener, self).__init__(pipe)
-            self.codes = dict(MAC_EVENT_CODES)
-
         def install_handle_input(self):
             """Install the hook."""
             self.app = NSApplication.sharedApplication()
@@ -2158,40 +2319,6 @@ def mac_keyboard_process(pipe):
             """Stop the listener on deletion."""
             AppHelper.stopEventLoop()
 
-        def handle_input(self, event):
-            """Process they keyboard input."""
-            self.update_timeval()
-            events = []
-            key_code = event.keyCode()
-            if key_code in self.mac_codes:
-                new_code = self.mac_codes[key_code]
-            else:
-                new_code = 0
-            event_type = event.type()
-            if event_type == 10:
-                value = 1
-            elif event_type == 11:
-                value = 0
-            elif event_type == 12:
-                flags = event.modifierFlags()
-                # Note, this may be able to be made more accurate,
-                # i.e. handle two modifier keys at once.
-                if flags == 0x100:
-                    value = 0
-                else:
-                    value = 1
-            else:
-                value = -1
-            scan_event, key_event = self.emulate_press(
-                new_code, key_code, value, self.timeval)
-
-            events.append(scan_event)
-            events.append(key_event)
-            # End with a sync marker
-            events.append(self.sync_marker(self.timeval))
-            # We are done
-            self.write_to_pipe(events)
-
     # pylint: disable=unused-variable
     keyboard = MacKeyboardListener(pipe)
 
@@ -2199,25 +2326,41 @@ def mac_keyboard_process(pipe):
 class InputDevice(object):  # pylint: disable=useless-object-inheritance
     """A user input device."""
     # pylint: disable=too-many-instance-attributes
-    def __init__(self, manager, device_path,
+    def __init__(self, manager,
+                 device_path=None,
                  char_path_override=None,
                  read_size=1):
         self.read_size = read_size
         self.manager = manager
-        self._device_path = device_path
+        self.__pipe = None
+        self._listener = None
+
+        if device_path:
+            self._device_path = device_path
+        else:
+            self._set_device_path()
+        # We should by now have a device_path
+
+        try:
+            if not self._device_path:
+                raise NoDevicePath
+        except AttributeError:
+            raise NoDevicePath
+
         self.protocol, _, self.device_type = self._get_path_infomation()
         if char_path_override:
             self._character_device_path = char_path_override
         else:
-            self._character_device_path = os.path.realpath(device_path)
-        self._character_file = None
+            self._character_device_path = os.path.realpath(self._device_path)
 
-        if WIN or MAC:
-            self.__pipe = None
-            self._listener = None
+        self._character_file = None
 
         self.name = "Unknown Device"
         self._set_name()
+
+    def _set_device_path(self):
+        """Set the device path, overridden on the MAC and Windows."""
+        pass
 
     def _set_name(self):
         if NIX:
@@ -2257,15 +2400,16 @@ class InputDevice(object):  # pylint: disable=useless-object-inheritance
             try:
                 self._character_file = io.open(
                     self._character_device_path, 'rb')
+            except PermissionError:
+                # Python 3
+                raise PermissionError(PERMISSIONS_ERROR_TEXT)
             except IOError as err:
+                # Python 2
                 if err.errno == 13:
-                    raise PermissionDenied(
-                        "The user (that this program is being run as) does "
-                        "not have permission to access the input events, "
-                        "check groups and permissions, for example, on "
-                        "Debian, the user needs to be in the input group.")
+                    raise PermissionError(PERMISSIONS_ERROR_TEXT)
                 else:
                     raise
+
         return self._character_file
 
     def __iter__(self):
@@ -2284,20 +2428,26 @@ class InputDevice(object):  # pylint: disable=useless-object-inheritance
         subclasses."""
         return False
 
-    def _do_iter(self):
+    def _get_total_read_size(self):
+        """How much event data to process at once."""
         if self.read_size:
             read_size = EVENT_SIZE * self.read_size
         else:
             read_size = EVENT_SIZE
+        return read_size
+
+    def _do_iter(self):
+        read_size = self._get_total_read_size()
         data = self._get_data(read_size)
         if not data:
-            return
+            return None
         evdev_objects = iter_unpack(data)
         events = [self._make_event(*event) for event in evdev_objects]
         return events
 
     # pylint: disable=too-many-arguments
     def _make_event(self, tv_sec, tv_usec, ev_type, code, value):
+        """Create a friendly Python object from an evdev style event."""
         event_type = self.manager.get_event_type(ev_type)
         eventinfo = {
             "ev_type": event_type,
@@ -2343,6 +2493,11 @@ class Keyboard(InputDevice):
     Original umapped scan code, followed by the important key info
     followed by a sync.
     """
+    def _set_device_path(self):
+        super(Keyboard, self)._set_device_path()
+        if MAC:
+            self._device_path = APPKIT_KB_PATH
+
     def _set_name(self):
         super(Keyboard, self)._set_name()
         if WIN:
@@ -2355,8 +2510,9 @@ class Keyboard(InputDevice):
         """Get the correct target function."""
         if WIN:
             return keyboard_process
-        elif MAC:
+        if MAC:
             return mac_keyboard_process
+        return None
 
     def _get_data(self, read_size):
         """Get data from the character device."""
@@ -2368,6 +2524,11 @@ class Keyboard(InputDevice):
 class Mouse(InputDevice):
     """A mouse or other pointing-like device.
     """
+
+    def _set_device_path(self):
+        super(Mouse, self)._set_device_path()
+        if MAC:
+            self._device_path = APPKIT_MOUSE_PATH
 
     def _set_name(self):
         super(Mouse, self)._set_name()
@@ -2383,6 +2544,7 @@ class Mouse(InputDevice):
             return mouse_process
         if MAC:
             return appkit_mouse_process
+        return None
 
     def _get_data(self, read_size):
         """Get data from the character device."""
@@ -2393,6 +2555,11 @@ class Mouse(InputDevice):
 
 class MightyMouse(Mouse):
     """A mouse or other pointing device on the Mac."""
+
+    def _set_device_path(self):
+        super(MightyMouse, self)._set_device_path()
+        if MAC:
+            self._device_path = QUARTZ_MOUSE_PATH
 
     def _set_name(self):
         self.name = "Quartz Mouse"
@@ -2462,8 +2629,7 @@ class GamePad(InputDevice):
             event_code = self.manager.codes['type_codes'][event_type]
         except KeyError:
             raise UnknownEventType(
-                "We don't know what kind of event a %s is.",
-                event_type)
+                "We don't know what kind of event a %s is." % event_type)
         event = struct.pack(EVENT_FORMAT,
                             timeval[0],
                             timeval[1],
@@ -2646,7 +2812,8 @@ class GamePad(InputDevice):
             raise RuntimeError(
                 "Unknown error %d attempting to get state of device %d" % (
                     res, self.__device_number))
-        # else return None (device is not connected)
+        # else (device is not connected)
+        return None
 
     def set_vibration(self, left_motor, right_motor):
         "Control the speed of both motors seperately"
@@ -2722,6 +2889,7 @@ class DeviceManager(object):  # pylint: disable=useless-object-inheritance
 
     def _update_all_devices(self):
         """Update the all_devices list."""
+        self.all_devices = []
         self.all_devices.extend(self.keyboards)
         self.all_devices.extend(self.mice)
         self.all_devices.extend(self.gamepads)
@@ -2772,7 +2940,9 @@ class DeviceManager(object):  # pylint: disable=useless-object-inheritance
                 break
         else:
             # We didn't find an xinput library
-            warn("No xinput driver dll found, gamepads not supported.")
+            warn(
+                "No xinput driver dll found, gamepads not supported.",
+                RuntimeWarning)
 
     def _find_devices_win(self):
         """Find devices on Windows."""
@@ -2791,17 +2961,9 @@ class DeviceManager(object):  # pylint: disable=useless-object-inheritance
 
     def _find_devices_mac(self):
         """Find devices on Mac."""
-        self.keyboards.append(Keyboard(
-            self,
-            "/dev/input/by-id/usb-AppKit_Keyboard-event-kbd"))
-
-        self.mice.append(MightyMouse(
-            self,
-            "/dev/input/by-id/usb-Quartz_Mouse-event-mouse"))
-
-        self.mice.append(Mouse(
-            self,
-            "/dev/input/by-id/usb-AppKit_Mouse-event-mouse"))
+        self.keyboards.append(Keyboard(self))
+        self.mice.append(MightyMouse(self))
+        self.mice.append(Mouse(self))
 
     def _detect_gamepads(self):
         """Find gamepads."""

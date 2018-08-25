@@ -21,6 +21,7 @@ try:
     import unittest.mock
 except ImportError:
     TESTS_REQUIRE.append('mock')
+    TESTS_REQUIRE.append('pathlib2')
 
 INSTALL_REQUIRES = []
 
