@@ -230,12 +230,16 @@ class DeviceManagerTestCase(TestCase):
             # Disable pylint on Python 2 moaning about assertWarns
             # pylint: disable=no-member
             with self.assertWarns(RuntimeWarning):
-                result = self.device_manger._parse_device_path("Bob")
+                self.device_manger._parse_device_path("Bob")
 
         else:
-            result = self.device_manger._parse_device_path("Jim")
+            self.device_manger._parse_device_path("Jim")
 
-        self.assertIsNone(result)
+        self.assertEqual(self.device_manger._raw, [])
+        self.assertEqual(self.device_manger.keyboards, [])
+        self.assertEqual(self.device_manger.mice, [])
+        self.assertEqual(self.device_manger.gamepads, [])
+        self.assertEqual(self.device_manger.other_devices, [])
 
     def test_get_event_type(self):
         """Tests the get_event_type method."""

@@ -17,6 +17,7 @@ RAW = ""
 class MockPoint(object):
     """A pretend AppKit point object."""
     # pylint: disable=too-few-public-methods,invalid-name
+    # pylint: disable=useless-object-inheritance
     x = 600
     y = 400
 
@@ -787,3 +788,155 @@ class AppKitMouseBaseListenerTestCase(TestCase):
         mock_handle_relative.assert_called_once_with(event)
         mock_handle_absolute.assert_called_once_with(event)
         mock_write_to_pipe.assert_called_once()
+
+
+class AppKitKeyboardListenerTestCase(TestCase):
+    """Test the Mac keyboard support."""
+    def test_init(self):
+        """The created object knows the keyboard codes."""
+        pipe = mock.MagicMock()
+        listener = inputs.AppKitKeyboardListener(pipe)
+        self.assertEqual(listener.events, [])
+        self.assertEqual(listener.codes[0], 30)
+        self.assertEqual(listener.codes[120], 60)
+        self.assertEqual(listener.codes[104], 90)
+
+    def test_get_event_key_code(self):
+        """Get event type called keyCode()."""
+        pipe = mock.MagicMock()
+        listener = inputs.AppKitKeyboardListener(pipe)
+        event = mock.MagicMock()
+        event_type = listener._get_event_key_code(event)
+        call = event.method_calls[0]
+        self.assertEqual(call[0], 'keyCode')
+        event_type.assert_not_called()
+
+    def test_get_event_type(self):
+        """Get event type called type()."""
+        pipe = mock.MagicMock()
+        listener = inputs.AppKitKeyboardListener(pipe)
+        event = mock.MagicMock()
+        event_type = listener._get_event_type(event)
+        call = event.method_calls[0]
+        self.assertEqual(call[0], 'type')
+        event_type.assert_not_called()
+
+    def test_get_flag_value(self):
+        """Get event flags calls event.modifierFlags()."""
+        pipe = mock.MagicMock()
+        listener = inputs.AppKitKeyboardListener(pipe)
+        event = mock.MagicMock()
+        flag_value = listener._get_flag_value(event)
+        call = event.method_calls[0]
+        self.assertEqual(call[0], 'modifierFlags')
+        self.assertEqual(flag_value, 1)
+
+    # Tidy up the below method names after testing on the mac.
+
+    def test_get_flag_value_something(self):
+        """Get event flags calls event.modifierFlags()."""
+        pipe = mock.MagicMock()
+        listener = inputs.AppKitKeyboardListener(pipe)
+        event = mock.MagicMock()
+        modifier_flags = mock.MagicMock(return_value=256)
+        event.attach_mock(modifier_flags, 'modifierFlags')
+        flag_value = listener._get_flag_value(event)
+        call = event.method_calls[0]
+        self.assertEqual(call[0], 'modifierFlags')
+        self.assertEqual(flag_value, 0)
+
+    def test_get_key_value_type_10(self):
+        """Event type 10 should return 1."""
+        pipe = mock.MagicMock()
+        listener = inputs.AppKitKeyboardListener(pipe)
+        event = mock.MagicMock()
+        key_value = listener._get_key_value(event, 10)
+        self.assertEqual(key_value, 1)
+
+    def test_get_key_value_type_11(self):
+        """Event type 11 should return 0."""
+        pipe = mock.MagicMock()
+        listener = inputs.AppKitKeyboardListener(pipe)
+        event = mock.MagicMock()
+        key_value = listener._get_key_value(event, 11)
+        self.assertEqual(key_value, 0)
+
+    def test_get_key_value_other_type(self):
+        """Unknown event type should return -1."""
+        pipe = mock.MagicMock()
+        listener = inputs.AppKitKeyboardListener(pipe)
+        event = mock.MagicMock()
+        key_value = listener._get_key_value(event, 15)
+        self.assertEqual(key_value, -1)
+
+    def test_get_key_value_type_12(self):
+        """Event type 12 should check the flag value."""
+        pipe = mock.MagicMock()
+        listener = inputs.AppKitKeyboardListener(pipe)
+        event = mock.MagicMock()
+        key_value = listener._get_key_value(event, 12)
+        self.assertEqual(key_value, 1)
+
+    @mock.patch.object(
+        inputs.AppKitKeyboardListener,
+        'write_to_pipe')
+    @mock.patch.object(
+        inputs.AppKitKeyboardListener,
+        '_get_flag_value',
+        return_value=0)
+    @mock.patch.object(
+        inputs.AppKitKeyboardListener,
+        '_get_event_type',
+        return_value=10)
+    @mock.patch.object(
+        inputs.AppKitKeyboardListener,
+        '_get_event_key_code',
+        return_value=4)
+    def test_handle_input(self,
+                          mock_get_event_key_code,
+                          mock_get_event_type,
+                          mock_get_flags,
+                          mock_write_to_pipe):
+        """Mac Keyboard events are processed."""
+        pipe = mock.MagicMock()
+        listener = inputs.AppKitKeyboardListener(pipe)
+        event = mock.MagicMock()
+        listener.handle_input(event)
+        self.assertEqual(len(listener.events), 3)
+        event_info = inputs.iter_unpack(listener.events[1])
+        self.assertEqual(next(event_info)[2:], (1, 35, 1))
+        mock_get_event_key_code.assert_called_once_with(event)
+        mock_get_event_type.assert_called_once_with(event)
+        mock_write_to_pipe.assert_called_once_with(listener.events)
+
+    @mock.patch.object(
+        inputs.AppKitKeyboardListener,
+        'write_to_pipe')
+    @mock.patch.object(
+        inputs.AppKitKeyboardListener,
+        '_get_flag_value',
+        return_value=0)
+    @mock.patch.object(
+        inputs.AppKitKeyboardListener,
+        '_get_event_type',
+        return_value=10)
+    @mock.patch.object(
+        inputs.AppKitKeyboardListener,
+        '_get_event_key_code',
+        return_value=256)
+    def test_handle_input_unknown_code(self,
+                                       mock_get_event_key_code,
+                                       mock_get_event_type,
+                                       mock_get_flags,
+                                       mock_write_to_pipe):
+        """Mac Keyboard events are processed."""
+        pipe = mock.MagicMock()
+        listener = inputs.AppKitKeyboardListener(pipe)
+        event = mock.MagicMock()
+        listener.handle_input(event)
+        self.assertEqual(len(listener.events), 3)
+        event_info = inputs.iter_unpack(listener.events[1])
+        self.assertEqual(next(event_info)[2:], (1, 0, 1))
+        mock_get_event_key_code.assert_called_once_with(event)
+        mock_get_event_type.assert_called_once_with(event)
+        mock_write_to_pipe.assert_called_once_with(listener.events)

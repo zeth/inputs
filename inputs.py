@@ -79,6 +79,12 @@ else:
 
 OLD = sys.version_info < (3, 4)
 
+PERMISSIONS_ERROR_TEXT = (
+    "The user (that this program is being run as) does "
+    "not have permission to access the input events, "
+    "check groups and permissions, for example, on "
+    "Debian, the user needs to be in the input group.")
+
 # Standard event format for most devices.
 # long, long, unsigned short, unsigned short, int
 EVENT_FORMAT = str('llHHi')
@@ -1361,10 +1367,12 @@ class XinputVibration(ctypes.Structure):
                 ("wRightMotorSpeed", ctypes.c_ushort)]
 
 
-class PermissionDenied(IOError):
-    """/dev/input not allowed by user.
-    Common Linux problem."""
-    pass
+if sys.version_info.major == 2:
+    # pylint: disable=redefined-builtin
+    class PermissionError(IOError):
+        """Raised when trying to run an operation without the adequate access
+        rights - for example filesystem permissions. Corresponds to errno
+        EACCES and EPERM."""
 
 
 class UnpluggedError(RuntimeError):
@@ -1459,8 +1467,7 @@ class BaseListener(object):  # pylint: disable=useless-object-inheritance
             event_code = self.type_codes[event_type]
         except KeyError:
             raise UnknownEventType(
-                "We don't know what kind of event a %s is.",
-                event_type)
+                "We don't know what kind of event a %s is." % event_type)
 
         event = struct.pack(EVENT_FORMAT,
                             timeval[0],
@@ -2196,39 +2203,60 @@ class AppKitKeyboardListener(BaseListener):
         super(AppKitKeyboardListener, self).__init__(
             pipe, codes=dict(MAC_KEYS))
 
-    def handle_input(self, event):
-        """Process they keyboard input."""
-        self.update_timeval()
-        events = []
-        key_code = event.keyCode()
-        if key_code in self.codes:
-            new_code = self.codes[key_code]
+    @staticmethod
+    def _get_event_key_code(event):
+        """Get the key code."""
+        return event.keyCode()
+
+    @staticmethod
+    def _get_event_type(event):
+        """Get the event type."""
+        return event.type()
+
+    @staticmethod
+    def _get_flag_value(event):
+        """Note, this may be able to be made more accurate,
+            i.e. handle two modifier keys at once."""
+        flags = event.modifierFlags()
+        if flags == 0x100:
+            value = 0
         else:
-            new_code = 0
-        event_type = event.type()
+            value = 1
+        return value
+
+    def _get_key_value(self, event, event_type):
+        """Get the key value."""
         if event_type == 10:
             value = 1
         elif event_type == 11:
             value = 0
         elif event_type == 12:
-            flags = event.modifierFlags()
-            # Note, this may be able to be made more accurate,
-            # i.e. handle two modifier keys at once.
-            if flags == 0x100:
-                value = 0
-            else:
-                value = 1
+            value = self._get_flag_value(event)
         else:
             value = -1
-        scan_event, key_event = self.emulate_press(
-            new_code, key_code, value, self.timeval)
+        return value
 
-        events.append(scan_event)
-        events.append(key_event)
+    def handle_input(self, event):
+        """Process they keyboard input."""
+        self.update_timeval()
+        self.events = []
+        code = self._get_event_key_code(event)
+
+        if code in self.codes:
+            new_code = self.codes[code]
+        else:
+            new_code = 0
+        event_type = self._get_event_type(event)
+        value = self._get_key_value(event, event_type)
+        scan_event, key_event = self.emulate_press(
+            new_code, code, value, self.timeval)
+
+        self.events.append(scan_event)
+        self.events.append(key_event)
         # End with a sync marker
-        events.append(self.sync_marker(self.timeval))
+        self.events.append(self.sync_marker(self.timeval))
         # We are done
-        self.write_to_pipe(events)
+        self.write_to_pipe(self.events)
 
 
 def mac_keyboard_process(pipe):
@@ -2372,15 +2400,16 @@ class InputDevice(object):  # pylint: disable=useless-object-inheritance
             try:
                 self._character_file = io.open(
                     self._character_device_path, 'rb')
+            except PermissionError:
+                # Python 3
+                raise PermissionError(PERMISSIONS_ERROR_TEXT)
             except IOError as err:
+                # Python 2
                 if err.errno == 13:
-                    raise PermissionDenied(
-                        "The user (that this program is being run as) does "
-                        "not have permission to access the input events, "
-                        "check groups and permissions, for example, on "
-                        "Debian, the user needs to be in the input group.")
+                    raise PermissionError(PERMISSIONS_ERROR_TEXT)
                 else:
                     raise
+
         return self._character_file
 
     def __iter__(self):
@@ -2399,21 +2428,26 @@ class InputDevice(object):  # pylint: disable=useless-object-inheritance
         subclasses."""
         return False
 
-    def _do_iter(self):
+    def _get_total_read_size(self):
+        """How much event data to process at once."""
         if self.read_size:
             read_size = EVENT_SIZE * self.read_size
         else:
             read_size = EVENT_SIZE
+        return read_size
+
+    def _do_iter(self):
+        read_size = self._get_total_read_size()
         data = self._get_data(read_size)
         if not data:
-            return
+            return None
         evdev_objects = iter_unpack(data)
         events = [self._make_event(*event) for event in evdev_objects]
         return events
 
     # pylint: disable=too-many-arguments
     def _make_event(self, tv_sec, tv_usec, ev_type, code, value):
-        """Emulate an evdev event e.g. on Windows."""
+        """Create a friendly Python object from an evdev style event."""
         event_type = self.manager.get_event_type(ev_type)
         eventinfo = {
             "ev_type": event_type,
@@ -2476,8 +2510,9 @@ class Keyboard(InputDevice):
         """Get the correct target function."""
         if WIN:
             return keyboard_process
-        elif MAC:
+        if MAC:
             return mac_keyboard_process
+        return None
 
     def _get_data(self, read_size):
         """Get data from the character device."""
@@ -2509,6 +2544,7 @@ class Mouse(InputDevice):
             return mouse_process
         if MAC:
             return appkit_mouse_process
+        return None
 
     def _get_data(self, read_size):
         """Get data from the character device."""
@@ -2593,8 +2629,7 @@ class GamePad(InputDevice):
             event_code = self.manager.codes['type_codes'][event_type]
         except KeyError:
             raise UnknownEventType(
-                "We don't know what kind of event a %s is.",
-                event_type)
+                "We don't know what kind of event a %s is." % event_type)
         event = struct.pack(EVENT_FORMAT,
                             timeval[0],
                             timeval[1],
@@ -2777,7 +2812,8 @@ class GamePad(InputDevice):
             raise RuntimeError(
                 "Unknown error %d attempting to get state of device %d" % (
                     res, self.__device_number))
-        # else return None (device is not connected)
+        # else (device is not connected)
+        return None
 
     def set_vibration(self, left_motor, right_motor):
         "Control the speed of both motors seperately"

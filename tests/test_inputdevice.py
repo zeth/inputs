@@ -2,13 +2,21 @@
 # pylint: disable=protected-access,no-self-use
 from unittest import TestCase
 
-import inputs
+import sys
+import struct
 
 from tests.constants import mock
+
+import inputs
+
+if sys.version_info.major == 2:
+    # pylint: disable=redefined-builtin
+    from inputs import PermissionError
 
 KBD_PATH = '/dev/input/by-path/platform-i8042-serio-0-event-kbd'
 EV_PATH = '/dev/input/event4'
 REPR = 'inputs.InputDevice("' + KBD_PATH + '")'
+CHARFILE = 'MY_CHARACTER_FILE'
 
 
 class InputDeviceTestCase(TestCase):
@@ -112,3 +120,177 @@ class InputDeviceTestCase(TestCase):
         inputdevice = inputs.InputDevice(manager, KBD_PATH)
         self.assertEqual(inputdevice.get_char_name(), 'event4')
         mock_set_name.assert_called()
+
+    # Check if this works on non-Linux
+    @mock.patch.object(inputs.InputDevice, '_set_name')
+    @mock.patch('io.open', return_value=CHARFILE)
+    def test_character_device(self,
+                              mock_io_open,
+                              mock_set_name):
+        """InputDevice has a character device property."""
+        manager = mock.MagicMock()
+        inputdevice = inputs.InputDevice(manager, KBD_PATH)
+        self.assertEqual(inputdevice._character_device,
+                         CHARFILE)
+        mock_io_open.assert_called()
+        mock_set_name.assert_called()
+
+    @mock.patch.object(inputs.InputDevice, '_set_name')
+    @mock.patch('io.open', side_effect=PermissionError)
+    def test_character_device_exception(self,
+                                        mock_io_open,
+                                        mock_set_name):
+        """InputDevice has a character device property."""
+        manager = mock.MagicMock()
+        inputdevice = inputs.InputDevice(manager, KBD_PATH)
+        with self.assertRaises(PermissionError):
+            self.assertEqual(inputdevice._character_device,
+                             CHARFILE)
+        mock_io_open.assert_called()
+        mock_set_name.assert_called()
+
+    @mock.patch.object(inputs.InputDevice, '_set_name')
+    @mock.patch.object(inputs.InputDevice,
+                       '_do_iter',
+                       return_value='Good Morning')
+    def test_iter(self, mock_do_iter, mock_set_name):
+        """The __iter__ method yields an event."""
+        manager = mock.MagicMock()
+        inputdevice = inputs.InputDevice(manager, KBD_PATH)
+        mock_set_name.assert_called()
+        result = inputdevice.__iter__()
+        self.assertEqual(next(result), 'Good Morning')
+        mock_do_iter.assert_called_once()
+
+    @mock.patch.object(inputs.InputDevice, '_set_name')
+    @mock.patch.object(inputs.InputDevice,
+                       '_character_device')
+    def test_get_data(self, mock_character_device, mock_set_name):
+        """InputDevice._get_data reads data from the character device."""
+        mock_read = mock.MagicMock(return_value='Good Evening')
+        mock_character_device.attach_mock(mock_read, 'read')
+
+        manager = mock.MagicMock()
+        inputdevice = inputs.InputDevice(manager, KBD_PATH)
+        mock_set_name.assert_called()
+        result = inputdevice._get_data(24)
+        self.assertEqual(result, 'Good Evening')
+        mock_read.assert_called_once_with(24)
+
+    @mock.patch.object(inputs.InputDevice, '_set_name')
+    def test_get_target_function(self, mock_set_name):
+        """InputDevice._get_target_function returns false."""
+        manager = mock.MagicMock()
+        inputdevice = inputs.InputDevice(manager, KBD_PATH)
+        mock_set_name.assert_called()
+        result = inputdevice._get_target_function()
+        self.assertEqual(result, False)
+
+    @mock.patch.object(inputs.InputDevice, '_set_name')
+    def test_get_total_read_size(self, mock_set_name):
+        """InputDevice.get_total_read_size returns how much data to process."""
+        manager = mock.MagicMock()
+        inputdevice = inputs.InputDevice(manager, KBD_PATH)
+        mock_set_name.assert_called()
+        size = inputdevice._get_total_read_size()
+        self.assertEqual(size, inputs.EVENT_SIZE)
+
+    @mock.patch.object(inputs.InputDevice, '_set_name')
+    def test_get_total_read_size_double(self, mock_set_name):
+        """InputDevice.get_total_read_size returns different read sizes."""
+        manager = mock.MagicMock()
+        inputdevice = inputs.InputDevice(manager, KBD_PATH, read_size=2)
+        mock_set_name.assert_called()
+
+        size = inputdevice._get_total_read_size()
+        self.assertEqual(size, inputs.EVENT_SIZE * 2)
+
+        inputdevice = inputs.InputDevice(manager, KBD_PATH, read_size=3)
+        size = inputdevice._get_total_read_size()
+        self.assertEqual(size, inputs.EVENT_SIZE * 3)
+
+        inputdevice = inputs.InputDevice(manager, KBD_PATH, read_size=4)
+        size = inputdevice._get_total_read_size()
+        self.assertEqual(size, inputs.EVENT_SIZE * 4)
+
+        inputdevice = inputs.InputDevice(manager, KBD_PATH, read_size=None)
+        size = inputdevice._get_total_read_size()
+        self.assertEqual(size, inputs.EVENT_SIZE)
+
+    @mock.patch.object(inputs.InputDevice, '_set_name')
+    @mock.patch.object(inputs.InputDevice,
+                       '_get_data',
+                       return_value=None)
+    def test_do_iter_none(self, mock_get_data, mock_set_name):
+        """InputDevice._do_iter returns no events if there is no data."""
+        manager = mock.MagicMock()
+        inputdevice = inputs.InputDevice(manager, KBD_PATH)
+        mock_set_name.assert_called()
+        result = inputdevice._do_iter()
+        self.assertEqual(result, None)
+        mock_get_data.assert_called_once()
+
+    @mock.patch.object(inputs.InputDevice, '_set_name')
+    @mock.patch.object(inputs.InputDevice,
+                       '_get_data',
+                       return_value=struct.pack(
+                           inputs.EVENT_FORMAT,
+                           1535009424,
+                           612521,
+                           1,
+                           30,
+                           1))
+    def test_do_iter(self, mock_get_data, mock_set_name):
+        """InputDevice._do_iter returns an event when there is data."""
+        manager = mock.MagicMock()
+        inputdevice = inputs.InputDevice(manager, KBD_PATH)
+        mock_set_name.assert_called()
+        events = inputdevice._do_iter()
+        mock_get_data.assert_called_once()
+        self.assertEqual(len(events), 1)
+        event = events[0]
+        self.assertEqual(event.timestamp,
+                         1535009424.612521)
+        # State of 1 means the key is down
+        self.assertEqual(event.state, 1)
+
+    @mock.patch.object(inputs.InputDevice, '_set_name')
+    @mock.patch.object(inputs.DeviceManager, '_post_init')
+    def test_make_event(self, mock_post_init, mock_set_name):
+        """Make_event can make an InputEvent object from evdev details."""
+        manager = inputs.DeviceManager()
+        # Make sure the manager has key type
+        self.assertEqual(manager.codes['types'][1], 'Key')
+        mock_post_init.assert_called()
+
+        inputdevice = inputs.InputDevice(manager, KBD_PATH)
+        mock_set_name.assert_called()
+        event = inputdevice._make_event(1535013055, 447534, 1, 30, 1)
+        self.assertEqual(event.device._device_path, KBD_PATH)
+        self.assertEqual(event.timestamp, 1535013055.447534)
+        self.assertEqual(event.ev_type, 'Key')
+        self.assertEqual(event.code, 'KEY_A')
+        self.assertEqual(event.state, 1)
+
+        # Let's do some more
+        event_1 = inputdevice._make_event(1535013837, 121253, 1, 44, 1)
+        event_2 = inputdevice._make_event(1535013874, 345229, 1, 18, 1)
+        event_3 = inputdevice._make_event(1535013899, 826326, 1, 20, 1)
+        event_4 = inputdevice._make_event(1535013919, 628367, 1, 35, 1)
+
+        self.assertEqual(event_1.code, 'KEY_Z')
+        self.assertEqual(event_2.code, 'KEY_E')
+        self.assertEqual(event_3.code, 'KEY_T')
+        self.assertEqual(event_4.code, 'KEY_H')
+
+    @mock.patch.object(inputs.InputDevice, '_set_name')
+    @mock.patch.object(inputs.InputDevice, '__iter__',
+                       return_value=iter(['Hello', 'Goodbye']))
+    def test_read(self, mock_iter, mock_set_name):
+        """Read should just iter the available input events."""
+        manager = mock.MagicMock()
+        inputdevice = inputs.InputDevice(manager, KBD_PATH)
+        mock_set_name.assert_called()
+        self.assertEqual(inputdevice.read(), 'Hello')
+        self.assertEqual(inputdevice.read(), 'Goodbye')
+        mock_iter.assert_called()
