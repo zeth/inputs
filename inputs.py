@@ -2861,7 +2861,7 @@ class GamePad(InputDevice):
         """Control the motors on Windows."""
         self._start_vibration_win(left_motor, right_motor)
         # We should do something more async here.
-        time.sleep(duration)
+        time.sleep(duration / 1000)
         self._stop_vibration_win()
 
     def __get_vibration_code(self, left_motor, right_motor, duration):
