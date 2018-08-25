@@ -31,18 +31,6 @@ class BaseListenerTestCase(TestCase):
         listener = inputs.BaseListener(pipe)
         self.assertEqual(len(listener.type_codes), 14)
 
-    def test_convert_timeval(self):
-        """Gives particular seconds and microseconds."""
-        pipe = mock.MagicMock()
-        listener = inputs.BaseListener(pipe)
-
-        self.assertEqual(listener._convert_timeval(2000.0002), (2000, 199))
-        self.assertEqual(listener._convert_timeval(100.000002), (100, 1))
-        self.assertEqual(listener._convert_timeval(199.2), (199, 199999))
-        self.assertEqual(listener._convert_timeval(0), (0, 0))
-        self.assertEqual(listener._convert_timeval(100), (100, 0))
-        self.assertEqual(listener._convert_timeval(0.001), (0, 1000))
-
     def test_get_timeval(self):
         """Gives seconds and microseconds."""
         pipe = mock.MagicMock()

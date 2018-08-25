@@ -50,10 +50,12 @@ import struct
 import platform
 import math
 import time
+import codecs
 from warnings import warn
 from itertools import count
 from operator import itemgetter
 from multiprocessing import Process, Pipe
+from fcntl import ioctl
 import ctypes
 
 __version__ = "0.4"
@@ -106,6 +108,14 @@ else:
     def iter_unpack(raw):
         """Yield successive EVENT_SIZE chunks from message."""
         return struct.iter_unpack(EVENT_FORMAT, raw)
+
+
+def convert_timeval(seconds_since_epoch):
+    """Convert time into C style timeval."""
+    frac, whole = math.modf(seconds_since_epoch)
+    microseconds = math.floor(frac * 1000000)
+    seconds = math.floor(whole)
+    return seconds, microseconds
 
 
 SPECIAL_DEVICES = (
@@ -1439,16 +1449,9 @@ class BaseListener(object):  # pylint: disable=useless-object-inheritance
         self.uninstall_handle_input()
 
     @staticmethod
-    def _convert_timeval(seconds_since_epoch):
-        """Convert time into C style timeval."""
-        frac, whole = math.modf(seconds_since_epoch)
-        microseconds = math.floor(frac * 1000000)
-        seconds = math.floor(whole)
-        return seconds, microseconds
-
-    def get_timeval(self):
+    def get_timeval():
         """Get the time in seconds and microseconds."""
-        return self._convert_timeval(time.time())
+        return convert_timeval(time.time())
 
     def update_timeval(self):
         """Update the timeval with the current time."""
@@ -2581,6 +2584,7 @@ class GamePad(InputDevice):
         super(GamePad, self).__init__(manager,
                                       device_path,
                                       char_path_override)
+        self._write_file = None
         if WIN:
             if "Microsoft_Corporation_Controller" in self._device_path:
                 self.name = "Microsoft X-Box 360 pad"
@@ -2612,10 +2616,7 @@ class GamePad(InputDevice):
     @staticmethod
     def __get_timeval():
         """Get the time and make it into C style timeval."""
-        frac, whole = math.modf(time.time())
-        microseconds = math.floor(frac * 1000000)
-        seconds = math.floor(whole)
-        return seconds, microseconds
+        return convert_timeval(time.time())
 
     def create_event_object(self,
                             event_type,
@@ -2815,18 +2816,80 @@ class GamePad(InputDevice):
         # else (device is not connected)
         return None
 
-    def set_vibration(self, left_motor, right_motor):
+    @property
+    def _write_device(self):
+        if not self._write_file:
+            if not NIX:
+                return None
+            try:
+                self._write_file = io.open(
+                    self._character_device_path, 'wb')
+            except PermissionError:
+                # Python 3
+                raise PermissionError(PERMISSIONS_ERROR_TEXT)
+            except IOError as err:
+                # Python 2
+                if err.errno == 13:
+                    raise PermissionError(PERMISSIONS_ERROR_TEXT)
+                else:
+                    raise
+
+        return self._write_file
+
+    def _start_vibration_win(self, left_motor, right_motor):
+        """Start the vibration, which will run until stopped."""
+        xinput_set_state = self.manager.xinput.XInputSetState
+        xinput_set_state.argtypes = [
+            ctypes.c_uint, ctypes.POINTER(XinputVibration)]
+        xinput_set_state.restype = ctypes.c_uint
+        vibration = XinputVibration(
+            int(left_motor * 65535), int(right_motor * 65535))
+        xinput_set_state(self.__device_number, ctypes.byref(vibration))
+
+    def _stop_vibration_win(self):
+        """Stop the vibration."""
+        xinput_set_state = self.manager.xinput.XInputSetState
+        xinput_set_state.argtypes = [
+            ctypes.c_uint, ctypes.POINTER(XinputVibration)]
+        xinput_set_state.restype = ctypes.c_uint
+        stop_vibration = ctypes.byref(XinputVibration(0, 0))
+        xinput_set_state(self.__device_number, stop_vibration)
+
+    def _set_vibration_win(self, left_motor, right_motor, duration):
+        """Control the motors on Windows."""
+        self._start_vibration_win(left_motor, right_motor)
+        # We should do something more async here.
+        time.sleep(duration)
+        self._stop_vibration_win()
+
+    def __get_vibration_code(self, left_motor, right_motor, duration):
+        """This is some crazy voodoo, if you can simplify it, please do."""
+        inner_event = struct.pack(
+            '2h6x2h2x2H28x',
+            0x50,
+            -1,
+            duration,
+            0,
+            int(left_motor * 65535),
+            int(right_motor * 65535))
+        buf_conts = ioctl(self._write_device, 1076905344, inner_event)
+        return int(codecs.encode(buf_conts[1:3], 'hex'), 16)
+
+    def _set_vibration_nix(self, left_motor, right_motor, duration):
+        """Control the motors on Linux.
+        Duration is in miliseconds."""
+        code = self.__get_vibration_code(left_motor, right_motor, duration)
+        secs, msecs = convert_timeval(time.time())
+        outer_event = struct.pack(EVENT_FORMAT, secs, msecs, 0x15, code, 1)
+        self._write_device.write(outer_event)
+        self._write_device.flush()
+
+    def set_vibration(self, left_motor, right_motor, duration):
         "Control the speed of both motors seperately"
         if WIN:
-            # Set up function argument types and return type
-            xinput_set_state = self.manager.xinput.XInputSetState
-            xinput_set_state.argtypes = [
-                ctypes.c_uint, ctypes.POINTER(XinputVibration)]
-            xinput_set_state.restype = ctypes.c_uint
-
-            vibration = XinputVibration(
-                int(left_motor * 65535), int(right_motor * 65535))
-            xinput_set_state(self.__device_number, ctypes.byref(vibration))
+            self._set_vibration_win(left_motor, right_motor, duration)
+        elif NIX:
+            self._set_vibration_nix(left_motor, right_motor, duration)
         else:
             print("Not implemented yet. Coming soon.")
 
