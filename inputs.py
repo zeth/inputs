@@ -55,7 +55,6 @@ from warnings import warn
 from itertools import count
 from operator import itemgetter
 from multiprocessing import Process, Pipe
-from fcntl import ioctl
 import ctypes
 
 __version__ = "0.4"
@@ -78,6 +77,9 @@ else:
     WPARAM = ctypes.c_ulonglong
     LPARAM = ctypes.c_ulonglong
     MSG = ctypes.Structure
+
+if NIX:
+    from fcntl import ioctl
 
 OLD = sys.version_info < (3, 4)
 
