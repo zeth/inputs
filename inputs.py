@@ -2891,7 +2891,7 @@ class GamePad(InputDevice):
         elif NIX:
             self._set_vibration_nix(left_motor, right_motor, duration)
         else:
-            print("Not implemented yet. Coming soon.")
+            raise NotImplementedError
 
 
 class OtherDevice(InputDevice):
