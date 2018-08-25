@@ -2887,7 +2887,10 @@ class GamePad(InputDevice):
         self._write_device.flush()
 
     def set_vibration(self, left_motor, right_motor, duration):
-        "Control the speed of both motors seperately"
+        "Control the speed of both motors seperately or together.
+        left_motor and right_motor arguments require a number between
+        0 (off) amd 1 (full).
+        duration is miliseconds, e.g. 1000 for a second."
         if WIN:
             self._set_vibration_win(left_motor, right_motor, duration)
         elif NIX:
