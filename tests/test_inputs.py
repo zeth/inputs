@@ -99,3 +99,15 @@ class HelpersTestCase(TestCase):
         with self.assertRaises(inputs.UnpluggedError):
             # pylint: disable=pointless-statement
             inputs.get_gamepad()
+
+class ConvertTimevalTestCase(TestCase):
+    """Test the easy helper methods."""
+    # pylint: disable=arguments-differ
+    def test_convert_timeval(self):
+        """Gives particular seconds and microseconds."""
+        self.assertEqual(inputs.convert_timeval(2000.0002), (2000, 199))
+        self.assertEqual(inputs.convert_timeval(100.000002), (100, 1))
+        self.assertEqual(inputs.convert_timeval(199.2), (199, 199999))
+        self.assertEqual(inputs.convert_timeval(0), (0, 0))
+        self.assertEqual(inputs.convert_timeval(100), (100, 0))
+        self.assertEqual(inputs.convert_timeval(0.001), (0, 1000))
