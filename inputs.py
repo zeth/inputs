@@ -2857,9 +2857,15 @@ class GamePad(InputDevice):
         stop_vibration = ctypes.byref(XinputVibration(0, 0))
         xinput_set_state(self.__device_number, stop_vibration)
 
-    def _delay_and_stop(self, duration):
+    def _delay_and_stop(self, duration, dll):
+        xinput = getattr(ctypes.windll, dll)
         time.sleep(duration)
-        self._stop_vibration_win()
+        xinput_set_state = xinput.XInputSetState
+        xinput_set_state.argtypes = [
+            ctypes.c_uint, ctypes.POINTER(XinputVibration)]
+        xinput_set_state.restype = ctypes.c_uint
+        vibration = XinputVibration(0, 0)
+        xinput_set_state(self.__device_number, ctypes.byref(vibration))
 
     def _set_vibration_win(self, left_motor, right_motor, duration):
         """Control the motors on Windows."""
@@ -2939,6 +2945,7 @@ class DeviceManager(object):  # pylint: disable=useless-object-inheritance
         self.other_devices = []
         self.all_devices = []
         self.xinput = None
+        self.xinput_dll = None
         if WIN:
             self._raw_device_counts = {
                 'mice': 0,
@@ -3008,6 +3015,7 @@ class DeviceManager(object):  # pylint: disable=useless-object-inheritance
                 pass
             else:
                 # We found an xinput driver
+                self.xinput_dll = dll
                 break
         else:
             # We didn't find an xinput library
