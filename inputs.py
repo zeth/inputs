@@ -2886,9 +2886,10 @@ class GamePad(InputDevice):
     def _set_vibration_win(self, left_motor, right_motor, duration):
         """Control the motors on Windows."""
         self._start_vibration_win(left_motor, right_motor)
-        stop_process = Process(target=self._delay_and_stop,
+        stop_process = Process(target=delay_and_stop,
                                args=(duration,
-                                     self.manager.xinput_dll))
+                                     self.manager.xinput_dll,
+                                     self.__device_number))
         stop_process.start()
 
     def __get_vibration_code(self, left_motor, right_motor, duration):
