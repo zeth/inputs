@@ -2575,7 +2575,6 @@ class MightyMouse(Mouse):
         return quartz_mouse_process
 
 
-
 def delay_and_stop(duration, dll, device_number):
     """Stop vibration aka force feedback aka rumble on
     Windows after duration miliseconds."""
@@ -2587,7 +2586,6 @@ def delay_and_stop(duration, dll, device_number):
     xinput_set_state.restype = ctypes.c_uint
     vibration = XinputVibration(0, 0)
     xinput_set_state(device_number, ctypes.byref(vibration))
-
 
 
 # I made this GamePad class before Mouse and Keyboard above, and have
@@ -2872,16 +2870,6 @@ class GamePad(InputDevice):
         xinput_set_state.restype = ctypes.c_uint
         stop_vibration = ctypes.byref(XinputVibration(0, 0))
         xinput_set_state(self.__device_number, stop_vibration)
-
-    def _delay_and_stop(self, duration, dll):
-        xinput = getattr(ctypes.windll, dll)
-        time.sleep(duration)
-        xinput_set_state = xinput.XInputSetState
-        xinput_set_state.argtypes = [
-            ctypes.c_uint, ctypes.POINTER(XinputVibration)]
-        xinput_set_state.restype = ctypes.c_uint
-        vibration = XinputVibration(0, 0)
-        xinput_set_state(self.__device_number, ctypes.byref(vibration))
 
     def _set_vibration_win(self, left_motor, right_motor, duration):
         """Control the motors on Windows."""
