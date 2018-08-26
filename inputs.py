@@ -2857,12 +2857,15 @@ class GamePad(InputDevice):
         stop_vibration = ctypes.byref(XinputVibration(0, 0))
         xinput_set_state(self.__device_number, stop_vibration)
 
+    def _delay_and_stop(self, duration):
+        time.sleep(duration)
+        self._stop_vibration_win()
+
     def _set_vibration_win(self, left_motor, right_motor, duration):
         """Control the motors on Windows."""
         self._start_vibration_win(left_motor, right_motor)
-        # We should do something more async here.
-        time.sleep(duration / 1000)
-        self._stop_vibration_win()
+        stop_process = Process(target=self._delay_and_stop, args=(duration,))
+        stop_process.start()
 
     def __get_vibration_code(self, left_motor, right_motor, duration):
         """This is some crazy voodoo, if you can simplify it, please do."""
