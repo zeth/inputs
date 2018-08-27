@@ -164,6 +164,25 @@ XINPUT_DLL_NAMES = (
 XINPUT_ERROR_DEVICE_NOT_CONNECTED = 1167
 XINPUT_ERROR_SUCCESS = 0
 
+XBOX_STYLE_LED_CONTROL = {
+    0: 'off',
+    1: 'all blink, then previous setting',
+    2: '1/top-left blink, then on',
+    3: '2/top-right blink, then on',
+    4: '3/bottom-left blink, then on',
+    5: '4/bottom-right blink, then on',
+    6: '1/top-left on',
+    7: '2/top-right on',
+    8: '3/bottom-left on',
+    9: '4/bottom-right on',
+    10: 'rotate',
+    11: 'blink, based on previous setting',
+    12: 'slow blink, based on previous setting',
+    13: 'rotate with two lights',
+    14: 'persistent slow all blink',
+    15: 'blink once, then previous setting'
+}
+
 DEVICE_PROPERTIES = (
     (0x00, "INPUT_PROP_POINTER"),  # needs a pointer
     (0x01, "INPUT_PROP_DIRECT"),  # direct input devices
@@ -836,6 +855,22 @@ LEDS = (
     (0x0f, "LED_MAX"),
     (0x0f+1, "LED_CNT"))
 
+LED_TYPE_CODES = (
+    ('numlock', 0x00),
+    ('capslock', 0x01),
+    ('scrolllock', 0x02),
+    ('compose', 0x03),
+    ('kana', 0x04),
+    ('sleep', 0x05),
+    ('suspend', 0x06),
+    ('mute', 0x07),
+    ('misc', 0x08),
+    ('mail', 0x09),
+    ('charging', 0x0a),
+    ('max', 0x0f),
+    ('cnt', 0x0f+1)
+)
+
 AUTOREPEAT_VALUES = (
     (0x00, "REP_DELAY"),
     (0x01, "REP_PERIOD"),
@@ -1275,6 +1310,7 @@ EVENT_MAP = (
     ('Misc', MISC_EVENTS),
     ('Switch', SWITCH_EVENTS),
     ('LED', LEDS),
+    ('LED_type_codes', LED_TYPE_CODES),
     ('Sound', SOUNDS),
     ('Repeat', AUTOREPEAT_VALUES),
     ('ForceFeedback', FORCE_FEEDBACK),
@@ -2339,7 +2375,7 @@ class InputDevice(object):  # pylint: disable=useless-object-inheritance
         self.manager = manager
         self.__pipe = None
         self._listener = None
-
+        self.leds = None
         if device_path:
             self._device_path = device_path
         else:
@@ -2372,6 +2408,7 @@ class InputDevice(object):  # pylint: disable=useless-object-inheritance
             with open("/sys/class/input/%s/device/name" %
                       self.get_char_name()) as name_file:
                 self.name = name_file.read().strip()
+            self.leds = []
 
     def _get_path_infomation(self):
         """Get useful infomation from the device path."""
@@ -2383,6 +2420,10 @@ class InputDevice(object):  # pylint: disable=useless-object-inheritance
     def get_char_name(self):
         """Get short version of char device name."""
         return self._character_device_path.split('/')[-1]
+
+    def get_char_device_path(self):
+        """Get the char device path."""
+        return self._character_device_path
 
     def __str__(self):
         try:
@@ -2601,6 +2642,7 @@ class GamePad(InputDevice):
                                       device_path,
                                       char_path_override)
         self._write_file = None
+        self.__device_number = None
         if WIN:
             if "Microsoft_Corporation_Controller" in self._device_path:
                 self.name = "Microsoft X-Box 360 pad"
@@ -2609,6 +2651,26 @@ class GamePad(InputDevice):
                 self.__received_packets = 0
                 self.__missed_packets = 0
                 self.__last_state = self.__read_device()
+        if NIX:
+            self._number_xpad()
+
+    def _number_xpad(self):
+        """Get the number of the joystick."""
+        js_path = self._device_path.replace('-event', '')
+        js_chardev = os.path.realpath(js_path)
+        try:
+            number_text = js_chardev.split('js')[1]
+        except IndexError:
+            return
+        try:
+            number = int(number_text)
+        except ValueError:
+            return
+        self.__device_number = number
+
+    def get_number(self):
+        """Return the joystick number of the gamepad."""
+        return self.__device_number
 
     def __iter__(self):
         while True:
@@ -2922,6 +2984,161 @@ class OtherDevice(InputDevice):
     pass
 
 
+class LED(object):  # pylint: disable=useless-object-inheritance
+    """A light source."""
+    def __init__(self, manager, path, name):
+        self.manager = manager
+        self.path = path
+        self.name = name
+        self._write_file = None
+        self._character_device_path = None
+        self._post_init()
+
+    def _post_init(self):
+        """Post init setup."""
+        pass
+
+    def __str__(self):
+        try:
+            return self.name
+        except AttributeError:
+            return "Unknown Device"
+
+    def __repr__(self):
+        return '%s.%s("%s")' % (
+            self.__module__,
+            self.__class__.__name__,
+            self.path)
+
+    def status(self):
+        """Get the device status, i.e. the brightness level."""
+        status_filename = os.path.join(self.path, 'brightness')
+        with open(status_filename) as status_fp:
+            result = status_fp.read()
+        status_text = result.strip()
+        try:
+            status = int(status_text)
+        except ValueError:
+            return status_text
+        return status
+
+    def max_brightness(self):
+        """Get the device's maximum brightness level."""
+        status_filename = os.path.join(self.path, 'max_brightness')
+        with open(status_filename) as status_fp:
+            result = status_fp.read()
+        status_text = result.strip()
+        try:
+            status = int(status_text)
+        except ValueError:
+            return status_text
+        return status
+
+    @property
+    def _write_device(self):
+        """The output device."""
+        if not self._write_file:
+            if not NIX:
+                return None
+            try:
+                self._write_file = io.open(
+                    self._character_device_path, 'wb')
+            except PermissionError:
+                # Python 3
+                raise PermissionError(PERMISSIONS_ERROR_TEXT)
+            except IOError as err:
+                # Python 2
+                if err.errno == 13:
+                    raise PermissionError(PERMISSIONS_ERROR_TEXT)
+                else:
+                    raise
+
+        return self._write_file
+
+    def _make_event(self, event_type, code, value):
+        """Make a new event and send it to the character device."""
+        secs, msecs = convert_timeval(time.time())
+        data = struct.pack(EVENT_FORMAT,
+                           secs,
+                           msecs,
+                           event_type,
+                           code,
+                           value)
+        self._write_device.write(data)
+        self._write_device.flush()
+
+
+class SystemLED(LED):
+    """An LED on your system e.g. caps lock."""
+    def __init__(self, manager, path, name):
+        self.code = None
+        self.device_path = None
+        self.device = None
+        self.keyboard = None
+        super(SystemLED, self).__init__(manager, path, name)
+
+    def _post_init(self):
+        """Set up the device path and type code."""
+        self.device_path = os.path.realpath(os.path.join(self.path, 'device'))
+        if '::' in self.name:
+            chardev, code_name = self.name.split('::')
+            if code_name in self.manager.codes['LED_type_codes']:
+                self.code = self.manager.codes['LED_type_codes'][code_name]
+            try:
+                event_number = chardev.split('input')[1]
+            except IndexError:
+                print("Failed with", self.name)
+            else:
+                self._character_device_path = '/dev/input/event' + event_number
+                self._match_device()
+
+    def on(self):  # pylint: disable=invalid-name
+        """Turn the light on."""
+        self._make_event(1)
+
+    def off(self):
+        """Turn the light off."""
+        self._make_event(0)
+
+    def _make_event(self, value):  # pylint: disable=arguments-differ
+        """Make a new event and send it to the character device."""
+        super(SystemLED, self)._make_event(
+            self.manager.codes['type_codes']['LED'],
+            self.code,
+            value)
+
+    def _match_device(self):
+        """If the LED is connected to an input device,
+        associate the objects."""
+        for device in self.manager.all_devices:
+            if (device.get_char_device_path() ==
+                    self._character_device_path):
+                self.device = device
+                device.leds.append(self)
+                break
+
+
+class GamepadLED(LED):
+    """A light source on a gamepad."""
+    def __init__(self, manager, path, name):
+        self.code = None
+        self.device = None
+        self.gamepad = None
+        super(GamepadLED, self).__init__(manager, path, name)
+
+    def _post_init(self):
+        self._match_device()
+        self._character_device_path = self.gamepad.get_char_device_path()
+
+    def _match_device(self):
+        number = int(self.name.split('xpad')[1])
+        for gamepad in self.manager.gamepads:
+            if number == gamepad.get_number():
+                self.gamepad = gamepad
+                gamepad.leds.append(self)
+                break
+
+
 class RawInputDeviceList(ctypes.Structure):
     """
     Contains information about a raw input device.
@@ -2951,6 +3168,7 @@ class DeviceManager(object):  # pylint: disable=useless-object-inheritance
         self.gamepads = []
         self.other_devices = []
         self.all_devices = []
+        self.leds = []
         self.xinput = None
         self.xinput_dll = None
         if WIN:
@@ -2971,6 +3189,8 @@ class DeviceManager(object):  # pylint: disable=useless-object-inheritance
         else:
             self._find_devices()
         self._update_all_devices()
+        if NIX:
+            self._find_leds()
 
     def _update_all_devices(self):
         """Update the all_devices list."""
@@ -3125,6 +3345,20 @@ class DeviceManager(object):  # pylint: disable=useless-object-inheritance
         by_path = glob.glob('/dev/input/by-{key}/*-event-*'.format(key=key))
         for device_path in by_path:
             self._parse_device_path(device_path)
+
+    def _find_leds(self):
+        """Find LED devices, Linux-only so far."""
+        for path in glob.glob('/sys/class/leds/*'):
+            self._parse_led_path(path)
+
+    def _parse_led_path(self, path):
+        name = path.rsplit('/', 1)[1]
+        if name.startswith('xpad'):
+            self.leds.append(GamepadLED(self, path, name))
+        elif name.startswith('input'):
+            self.leds.append(SystemLED(self, path, name))
+        else:
+            self.leds.append(LED(self, path, name))
 
     def _get_char_names(self):
         """Get a list of already found devices."""
