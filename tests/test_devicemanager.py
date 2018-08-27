@@ -9,7 +9,7 @@ from tests.constants import mock, PurePath, PYTHON
 RAW = ""
 
 # Mocking adds an argument, whether we need it or not.
-# pylint: disable=unused-argument
+# pylint: disable=unused-argument,too-many-arguments
 
 KEYBOARD_PATH = "/dev/input/by-path/my-lovely-keyboard-0-event-kbd"
 MOUSE_PATH = "/dev/input/by-path/my-lovely-mouse-0-event-mouse"
@@ -23,14 +23,17 @@ class DeviceManagePostrInitTestCase(TestCase):
     @mock.patch.object(inputs.DeviceManager, '_find_devices')
     @mock.patch.object(inputs.DeviceManager, '_find_devices_mac')
     @mock.patch.object(inputs.DeviceManager, '_find_devices_win')
+    @mock.patch.object(inputs.DeviceManager, '_find_leds')
     @mock.patch.object(inputs.DeviceManager, '_update_all_devices')
     def test_post_init_linux(
             self,
             mock_update_all_devices,
+            mock_find_leds,
             mock_find_devices_win,
             mock_find_devices_mac,
             mock_find_devices):
         """On Linux, find_devices is called and the other methods are not."""
+        inputs.NIX = True
         inputs.WIN = False
         inputs.MAC = False
         # pylint: disable=unused-variable
@@ -39,6 +42,7 @@ class DeviceManagePostrInitTestCase(TestCase):
         mock_find_devices.assert_called()
         mock_find_devices_mac.assert_not_called()
         mock_find_devices_win.assert_not_called()
+        mock_find_leds.assert_called()
 
     @mock.patch.object(inputs.DeviceManager, '_find_devices')
     @mock.patch.object(inputs.DeviceManager, '_find_devices_mac')
@@ -50,6 +54,7 @@ class DeviceManagePostrInitTestCase(TestCase):
                            mock_find_devices_mac,
                            mock_find_devices):
         """On Mac, find_devices_mac is called and other methods are not."""
+        inputs.NIX = False
         inputs.WIN = False
         inputs.MAC = True
         inputs.DeviceManager()
@@ -70,6 +75,7 @@ class DeviceManagePostrInitTestCase(TestCase):
         """On Windows, find_devices_win is called and other methods are not."""
         inputs.WIN = True
         inputs.MAC = False
+        inputs.NIX = False
         inputs.DeviceManager()
         mock_update_all_devices.assert_called()
         mock_find_devices_win.assert_called()
@@ -79,6 +85,7 @@ class DeviceManagePostrInitTestCase(TestCase):
     def tearDown(self):
         inputs.WIN = False
         inputs.MAC = False
+        inputs.NIX = True
 
 
 MOCK_DEVICE = 'My Special Mock Input Device'
