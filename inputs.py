@@ -2999,10 +2999,7 @@ class LED(object):  # pylint: disable=useless-object-inheritance
         pass
 
     def __str__(self):
-        try:
-            return self.name
-        except AttributeError:
-            return "Unknown Device"
+        return self.name
 
     def __repr__(self):
         return '%s.%s("%s")' % (
@@ -3047,8 +3044,8 @@ class LED(object):  # pylint: disable=useless-object-inheritance
                 # Python 3
                 raise PermissionError(PERMISSIONS_ERROR_TEXT)
             except IOError as err:
-                # Python 2
-                if err.errno == 13:
+                # Python 2 only
+                if err.errno == 13:  # pragma: no cover
                     raise PermissionError(PERMISSIONS_ERROR_TEXT)
                 else:
                     raise
@@ -3074,11 +3071,11 @@ class SystemLED(LED):
         self.code = None
         self.device_path = None
         self.device = None
-        self.keyboard = None
         super(SystemLED, self).__init__(manager, path, name)
 
     def _post_init(self):
         """Set up the device path and type code."""
+        self._led_type_code = self.manager.get_typecode('LED')
         self.device_path = os.path.realpath(os.path.join(self.path, 'device'))
         if '::' in self.name:
             chardev, code_name = self.name.split('::')
@@ -3088,6 +3085,7 @@ class SystemLED(LED):
                 event_number = chardev.split('input')[1]
             except IndexError:
                 print("Failed with", self.name)
+                raise
             else:
                 self._character_device_path = '/dev/input/event' + event_number
                 self._match_device()
@@ -3103,7 +3101,7 @@ class SystemLED(LED):
     def _make_event(self, value):  # pylint: disable=arguments-differ
         """Make a new event and send it to the character device."""
         super(SystemLED, self)._make_event(
-            self.manager.codes['type_codes']['LED'],
+            self._led_type_code,
             self.code,
             value)
 
@@ -3408,6 +3406,10 @@ class DeviceManager(object):  # pylint: disable=useless-object-inheritance
             return self.codes[evtype][code]
         except KeyError:
             raise UnknownEventCode("We don't know this event.", evtype, code)
+
+    def get_typecode(self, name):
+        """Returns type code for `name`."""
+        return self.codes['type_codes'][name]
 
 
 devices = DeviceManager()  # pylint: disable=invalid-name
