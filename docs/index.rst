@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Inputs's documentation!
-==================================
+Welcome to the documentation for inputs!
+========================================
 
 Release v\ 0.5
 
