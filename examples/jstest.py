@@ -7,10 +7,6 @@ from inputs import get_gamepad
 
 
 EVENT_ABB = (
-    # D-PAD, aka HAT
-    ('Absolute-ABS_HAT0X', 'HX'),
-    ('Absolute-ABS_HAT0Y', 'HY'),
-
     # Left Joystick
     ('Absolute-ABS_X', 'LX'),
     ('Absolute-ABS_Y', 'LY'),
@@ -18,6 +14,10 @@ EVENT_ABB = (
     # Right Joystick
     ('Absolute-ABS_RX', 'RX'),
     ('Absolute-ABS_RY', 'RY'),
+
+    # D-PAD, aka HAT
+    ('Absolute-ABS_HAT0X', 'HX'),
+    ('Absolute-ABS_HAT0Y', 'HY'),
 
     # Triggers
     ('Absolute-ABS_Z', 'LZ'),
@@ -71,6 +71,25 @@ class JSTest(object):
             if key.startswith('Key'):
                 self.btn_state[value] = 0
                 self.old_btn_state[value] = 0
+        self._other = 0
+
+    def handle_unknown_event(self, event, key):
+        """Deal with unknown events."""
+        if event.ev_type == 'Key':
+            new_abbv = 'B' + str(self._other)
+            self.btn_state[new_abbv] = 0
+            self.old_btn_state[new_abbv] = 0
+        elif event.ev_type == 'Absolute':
+            new_abbv = 'A' + str(self._other)
+            self.abs_state[new_abbv] = 0
+            self.old_abs_state[new_abbv] = 0
+        else:
+            return None
+
+        self.abbrevs[key] = new_abbv
+        self._other += 1
+
+        return self.abbrevs[key]
 
     def process_event(self, event):
         """Process the event into a state."""
@@ -79,7 +98,12 @@ class JSTest(object):
         if event.ev_type == 'Misc':
             return
         key = event.ev_type + '-' + event.code
-        abbv = self.abbrevs[key]
+        try:
+            abbv = self.abbrevs[key]
+        except KeyError:
+            abbv = self.handle_unknown_event(event, key)
+            if not abbv:
+                return
         if event.ev_type == 'Key':
             self.old_btn_state[abbv] = self.btn_state[abbv]
             self.btn_state[abbv] = event.state
