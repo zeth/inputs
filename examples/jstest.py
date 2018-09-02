@@ -7,18 +7,29 @@ from inputs import get_gamepad
 
 
 EVENT_ABB = (
-    ('Absolute-ABS_X', 'LX'),
-    ('Absolute-ABS_Y', 'LY'),
-    ('Absolute-ABS_RX', 'RX'),
-    ('Absolute-ABS_RY', 'RY'),
-    ('Absolute-ABS_Z', 'LZ'),
-    ('Absolute-ABS_RZ', 'RZ'),
+    # D-PAD, aka HAT
     ('Absolute-ABS_HAT0X', 'HX'),
     ('Absolute-ABS_HAT0Y', 'HY'),
+
+    # Left Joystick
+    ('Absolute-ABS_X', 'LX'),
+    ('Absolute-ABS_Y', 'LY'),
+
+    # Right Joystick
+    ('Absolute-ABS_RX', 'RX'),
+    ('Absolute-ABS_RY', 'RY'),
+
+    # Triggers
+    ('Absolute-ABS_Z', 'LZ'),
+    ('Absolute-ABS_RZ', 'RZ'),
+
+    # Face Buttons
     ('Key-BTN_NORTH', 'N'),
     ('Key-BTN_EAST', 'E'),
     ('Key-BTN_SOUTH', 'S'),
     ('Key-BTN_WEST', 'W'),
+
+    # Other buttons
     ('Key-BTN_THUMBL', 'THL'),
     ('Key-BTN_THUMBR', 'THR'),
     ('Key-BTN_TL', 'TL'),
@@ -27,7 +38,16 @@ EVENT_ABB = (
     ('Key-BTN_TR2', 'TR3'),
     ('Key-BTN_MODE', 'M'),
     ('Key-BTN_START', 'ST'),
-    ('Key-BTN_SELECT', 'SL'),
+
+    # PiHUT SNES style controller buttons
+    ('Key-BTN_TRIGGER', 'N'),
+    ('Key-BTN_THUMB', 'E'),
+    ('Key-BTN_THUMB2', 'S'),
+    ('Key-BTN_TOP', 'W'),
+    ('Key-BTN_BASE3', 'SL'),
+    ('Key-BTN_BASE4', 'ST'),
+    ('Key-BTN_TOP2', 'TL'),
+    ('Key-BTN_PINKIE', 'TR')
 )
 
 
