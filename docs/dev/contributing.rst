@@ -15,7 +15,7 @@ How to Develop
 --------------
 
 Inputs is managed using github. To get started with developing inputs,
-download the code from github and run the tests using the below:
+download the code from github and run the tests using the below::
 
     git clone https://github.com/zeth/inputs.git
     cd inputs
