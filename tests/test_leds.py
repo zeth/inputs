@@ -2,8 +2,9 @@
 # pylint: disable=protected-access,no-self-use
 from unittest import TestCase
 import errno
+import os
 
-from tests.constants import mock, PYTHON
+from tests.constants import mock, PurePath, PYTHON
 
 import inputs
 if PYTHON == 2:
@@ -188,7 +189,14 @@ class SystemLEDTestCase(TestCase):
         self.assertEqual(led.device_path, SLED_REAL_PATH)
         self.assertEqual(led.code, 1)
         self.assertEqual(led._character_device_path, CHARPATH)
-        mock_realpath.assert_called_once_with(SLED_PATH + '/device')
+        target_dev_path = os.path.join(SLED_PATH, 'device')
+        dev_path = mock_realpath.call_args_list[0][0][0]
+
+        # The following two lines covert backslashes when running tests on Win
+        target_device_path = PurePath(target_dev_path).as_posix()
+        device_path = PurePath(dev_path).as_posix()
+
+        self.assertEqual(target_device_path, device_path)
         mock_match_device.assert_called_once_with()
 
     @mock.patch('os.path.realpath', return_value=SLED_WRONG_PATH)
@@ -204,7 +212,14 @@ class SystemLEDTestCase(TestCase):
         self.assertEqual(led.device_path, SLED_WRONG_PATH)
         self.assertEqual(led.code, None)
         self.assertEqual(led._character_device_path, None)
-        mock_realpath.assert_called_once_with(SLED_WRONG_PATH + '/device')
+        target_dev_path = os.path.join(SLED_WRONG_PATH, 'device')
+        dev_path = mock_realpath.call_args_list[0][0][0]
+
+        # The following two lines covert backslashes when running tests on Win
+        target_device_path = PurePath(target_dev_path).as_posix()
+        device_path = PurePath(dev_path).as_posix()
+
+        self.assertEqual(target_device_path, device_path)
         mock_match_device.assert_not_called()
 
     @mock.patch.object(inputs.SystemLED, '_make_event')
