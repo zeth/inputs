@@ -52,6 +52,13 @@ Windows
 * Xbox 360 Controller via USB cable
 * Xbox One Controller via USB cable
 
+PS4 DualShock 4 Controller
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Install the Windows driver from http://ds4windows.com/
+
+Then it works perfectly. Even the touchpad works as a mouse.
+
 Apple macOS High Sierra - 10.13
 -------------------------------
 
