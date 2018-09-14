@@ -47,7 +47,14 @@ EVENT_ABB = (
     ('Key-BTN_BASE3', 'SL'),
     ('Key-BTN_BASE4', 'ST'),
     ('Key-BTN_TOP2', 'TL'),
-    ('Key-BTN_PINKIE', 'TR')
+    ('Key-BTN_PINKIE', 'TR'),
+
+    # PS3 Style Controller
+    ('Key-BTN_DPAD_LEFT', 'DL'),
+    ('Key-BTN_DPAD_RIGHT', 'DR'),
+    ('Key-BTN_DPAD_DOWN', 'DD'),
+    ('Key-BTN_DPAD_UP', 'DU'),
+    ('Key-BTN_SELECT', 'SL'),
 )
 
 

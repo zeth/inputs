@@ -18,6 +18,7 @@ Linux
 * Xbox 360 Controller via USB cable
 * Xbox One Controller via USB cable
 * PS4 Controller via USB cable
+* PS3 Controller via USB cable (press PS button if controller is not awake)
 * Pi-Hut SNES Style USB Gamepad
 * Wii controller
 
