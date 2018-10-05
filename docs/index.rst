@@ -18,7 +18,7 @@ Release v\ 0.5
     :target: https://pypi.org/project/inputs/
 
 .. image:: https://codecov.io/gh/zeth/inputs/branch/master/graph/badge.svg
-    :target: https://codecov.io/gh/zeth/inputs             
+    :target: https://codecov.io/gh/zeth/inputs
     :alt: codecov.io
 
 .. image:: https://img.shields.io/badge/Say%20Thanks!-%F0%9F%A6%89-1EAEDB.svg
@@ -44,6 +44,7 @@ step-by-step instructions for getting the most out of Inputs.
    user/advanced
    user/hardwaresupport
    user/examples
+   user/microbit
 
 Developer Information
 ---------------------

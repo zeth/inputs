@@ -3,25 +3,13 @@
 from __future__ import print_function
 
 
-from inputs import get_gamepad
+import inputs
 
 
 EVENT_ABB = (
-    # Left Joystick
-    ('Absolute-ABS_X', 'LX'),
-    ('Absolute-ABS_Y', 'LY'),
-
-    # Right Joystick
-    ('Absolute-ABS_RX', 'RX'),
-    ('Absolute-ABS_RY', 'RY'),
-
     # D-PAD, aka HAT
     ('Absolute-ABS_HAT0X', 'HX'),
     ('Absolute-ABS_HAT0Y', 'HY'),
-
-    # Triggers
-    ('Absolute-ABS_Z', 'LZ'),
-    ('Absolute-ABS_RZ', 'RZ'),
 
     # Face Buttons
     ('Key-BTN_NORTH', 'N'),
@@ -47,14 +35,7 @@ EVENT_ABB = (
     ('Key-BTN_BASE3', 'SL'),
     ('Key-BTN_BASE4', 'ST'),
     ('Key-BTN_TOP2', 'TL'),
-    ('Key-BTN_PINKIE', 'TR'),
-
-    # PS3 Style Controller
-    ('Key-BTN_DPAD_LEFT', 'DL'),
-    ('Key-BTN_DPAD_RIGHT', 'DR'),
-    ('Key-BTN_DPAD_DOWN', 'DD'),
-    ('Key-BTN_DPAD_UP', 'DU'),
-    ('Key-BTN_SELECT', 'SL'),
+    ('Key-BTN_PINKIE', 'TR')
 )
 
 
@@ -65,12 +46,12 @@ MIN_ABS_DIFFERENCE = 5
 
 class JSTest(object):
     """Simple joystick test class."""
-    def __init__(self):
+    def __init__(self, gamepad=None, abbrevs=EVENT_ABB):
         self.btn_state = {}
         self.old_btn_state = {}
         self.abs_state = {}
         self.old_abs_state = {}
-        self.abbrevs = dict(EVENT_ABB)
+        self.abbrevs = dict(abbrevs)
         for key, value in self.abbrevs.items():
             if key.startswith('Absolute'):
                 self.abs_state[value] = 0
@@ -79,6 +60,16 @@ class JSTest(object):
                 self.btn_state[value] = 0
                 self.old_btn_state[value] = 0
         self._other = 0
+        self.gamepad = gamepad
+        if not gamepad:
+            self._get_gamepad()
+
+    def _get_gamepad(self):
+        """Get a gamepad object."""
+        try:
+            self.gamepad = inputs.devices.gamepads[0]
+        except IndexError:
+            raise inputs.UnpluggedError("No gamepad found.")
 
     def handle_unknown_event(self, event, key):
         """Deal with unknown events."""
@@ -147,7 +138,10 @@ class JSTest(object):
 
     def process_events(self):
         """Process available events."""
-        events = get_gamepad()
+        try:
+            events = self.gamepad.read()
+        except EOFError:
+            events = []
         for event in events:
             self.process_event(event)
 
