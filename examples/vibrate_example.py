@@ -6,9 +6,11 @@ import time
 import inputs
 
 
-def main():
+def main(gamepad=None):
     """Vibrate the gamepad."""
-    gamepad = inputs.devices.gamepads[0]
+    if not gamepad:
+        gamepad = inputs.devices.gamepads[0]
+
     # Vibrate left
     gamepad.set_vibration(1, 0, 1000)
 
