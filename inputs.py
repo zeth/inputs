@@ -2530,7 +2530,7 @@ class InputDevice(object):  # pylint: disable=useless-object-inheritance
 
             self.__pipe, child_conn = Pipe(duplex=False)
             self._listener = Process(target=target_function,
-                                     args=(child_conn,))
+                                     args=(child_conn,), daemon=True)
             self._listener.start()
         return self.__pipe
 
