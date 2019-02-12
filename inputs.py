@@ -1299,7 +1299,7 @@ CURRENT = ()
 
 EVENT_MAP = (
     ('types', EVENT_TYPES),
-    ('type_codes', ((value, key) for key, value in EVENT_TYPES)),
+    ('type_codes', list((value, key) for key, value in EVENT_TYPES)),
     ('wincodes', WINCODES),
     ('specials', SPECIAL_DEVICES),
     ('xpad', XINPUT_MAPPING),
