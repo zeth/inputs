@@ -2494,6 +2494,7 @@ class InputDevice(object):  # pylint: disable=useless-object-inheritance
         read_size = self._get_total_read_size()
         data = self._get_data(read_size)
         if not data:
+            time.sleep(0.001)
             return None
         evdev_objects = iter_unpack(data)
         events = [self._make_event(*event) for event in evdev_objects]
