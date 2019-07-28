@@ -3189,15 +3189,18 @@ class DeviceManager(object):  # pylint: disable=useless-object-inheritance
 
     def _post_init(self):
         """Call the find devices method for the relevant platform."""
-        if WIN:
-            self._find_devices_win()
-        elif MAC:
-            self._find_devices_mac()
-        else:
-            self._find_devices()
-        self._update_all_devices()
-        if NIX:
-            self._find_leds()
+        try:
+            if WIN:
+                self._find_devices_win()
+            elif MAC:
+                self._find_devices_mac()
+            else:
+                self._find_devices()
+            self._update_all_devices()
+            if NIX:
+                self._find_leds()
+        except FileNotFoundError:
+            pass
 
     def _update_all_devices(self):
         """Update the all_devices list."""
