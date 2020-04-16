@@ -3134,7 +3134,7 @@ class GamepadLED(LED):
 
     def _post_init(self):
         self._match_device()
-        self._character_device_path = self.gamepad.get_char_device_path()
+        self._character_device_path = self.gamepad.get_char_device_path() if self.gamepad else None
 
     def _match_device(self):
         number = int(self.name.split('xpad')[1])
