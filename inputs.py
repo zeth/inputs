@@ -1299,7 +1299,7 @@ CURRENT = ()
 
 EVENT_MAP = (
     ('types', EVENT_TYPES),
-    ('type_codes', ((value, key) for key, value in EVENT_TYPES)),
+    ('type_codes', tuple((value, key) for key, value in EVENT_TYPES)),
     ('wincodes', WINCODES),
     ('specials', SPECIAL_DEVICES),
     ('xpad', XINPUT_MAPPING),
@@ -3677,3 +3677,7 @@ def get_gamepad():
     except IndexError:
         raise UnpluggedError("No gamepad found.")
     return gamepad.read()
+
+def rescan_devices():
+    global devices
+    devices = DeviceManager()
