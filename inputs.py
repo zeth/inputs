@@ -1285,7 +1285,7 @@ MAC_KEYS = (
 # We have yet to support force feedback but probably should
 # eventually:
 
-FORCE_FEEDBACK = ()  # Motor in gamepad
+FORCE_FEEDBACK = (((i, hex(i)) for i in range(0, 65536)))  # Motor in gamepad
 FORCE_FEEDBACK_STATUS = ()  # Status of motor
 
 POWER = ()  # Power switch
