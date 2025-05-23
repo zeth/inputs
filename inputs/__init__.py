@@ -47,7 +47,6 @@ import sys
 import io
 import glob
 import struct
-import platform
 import math
 import time
 import codecs
@@ -58,14 +57,11 @@ from multiprocessing import Process, Pipe
 import ctypes
 
 from .constants import (EVENT_MAP, MAC_EVENT_CODES, EVENT_TYPES, MAC_KEYS, XINPUT_DLL_NAMES, XINPUT_ERROR_SUCCESS, XINPUT_ERROR_DEVICE_NOT_CONNECTED)
+from .platforms import (WIN, MAC, NIX)
 
 
 __version__ = "0.6"
 
-
-WIN = True if platform.system() == 'Windows' else False
-MAC = True if platform.system() == 'Darwin' else False
-NIX = True if platform.system() == 'Linux' else False
 
 if WIN:
     # pylint: disable=wrong-import-position
