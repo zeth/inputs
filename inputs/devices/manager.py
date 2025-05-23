@@ -21,6 +21,7 @@ from .keyboard import Keyboard
 from .led import LED, GamepadLED, SystemLED
 from .mouse import Mouse
 from ..platforms.mac.mouse import MightyMouse
+from .common import OtherDevice
 
 
 class DeviceManager(object):  # pylint: disable=useless-object-inheritance

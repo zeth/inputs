@@ -4,7 +4,7 @@ from unittest import TestCase
 import errno
 import os
 
-from inputs.devices.led import LED
+from inputs.devices.led import LED, SystemLED
 from inputs.utils import iter_unpack
 from tests.constants import mock, PurePath, PYTHON
 
@@ -161,10 +161,10 @@ def setup_mock_manager():
 
 class SystemLEDTestCase(TestCase):
     """Test the SystemLED class."""
-    @mock.patch.object(inputs.SystemLED, '_post_init')
+    @mock.patch.object(SystemLED, '_post_init')
     def test_systemled_init(self, mock_post_init):
         """The init method stores the path and name."""
-        led = inputs.SystemLED(None, SLED_PATH, SLED_NAME)
+        led = SystemLED(None, SLED_PATH, SLED_NAME)
         self.assertEqual(led.path, SLED_PATH)
         self.assertEqual(led.name, SLED_NAME)
         self.assertEqual(led.code, None)
@@ -173,13 +173,13 @@ class SystemLEDTestCase(TestCase):
         mock_post_init.assert_called()
 
     @mock.patch('os.path.realpath', return_value=SLED_REAL_PATH)
-    @mock.patch.object(inputs.SystemLED, '_match_device')
+    @mock.patch.object(SystemLED, '_match_device')
     def test_post_init(self,
                        mock_match_device,
                        mock_realpath):
         """SystemLED._post_init sets the device path and chardev path."""
         manager = setup_mock_manager()
-        led = inputs.SystemLED(manager, SLED_PATH, SLED_NAME)
+        led = SystemLED(manager, SLED_PATH, SLED_NAME)
         manager.get_typecode.assert_called_once_with('LED')
         self.assertEqual(led._led_type_code, 17)
         self.assertEqual(led.path, SLED_PATH)
@@ -198,13 +198,13 @@ class SystemLEDTestCase(TestCase):
         mock_match_device.assert_called_once_with()
 
     @mock.patch('os.path.realpath', return_value=SLED_WRONG_PATH)
-    @mock.patch.object(inputs.SystemLED, '_match_device')
+    @mock.patch.object(SystemLED, '_match_device')
     def test_post_init_non_sled_path(self,
                                      mock_match_device,
                                      mock_realpath):
         """SystemLED._post_init copes with invalid path/name arguments."""
         manager = setup_mock_manager()
-        led = inputs.SystemLED(manager, SLED_WRONG_PATH, SLED_WRONG_NAME)
+        led = SystemLED(manager, SLED_WRONG_PATH, SLED_WRONG_NAME)
         self.assertEqual(led.path, SLED_WRONG_PATH)
         self.assertEqual(led.name, SLED_WRONG_NAME)
         self.assertEqual(led.device_path, SLED_WRONG_PATH)
@@ -220,20 +220,20 @@ class SystemLEDTestCase(TestCase):
         self.assertEqual(target_device_path, device_path)
         mock_match_device.assert_not_called()
 
-    @mock.patch.object(inputs.SystemLED, '_make_event')
-    @mock.patch.object(inputs.SystemLED, '_post_init')
+    @mock.patch.object(SystemLED, '_make_event')
+    @mock.patch.object(SystemLED, '_post_init')
     def test_sled_on(self, mock_post_init, mock_make_event):
         """SystemLED.on makes an event with value 1."""
-        led = inputs.SystemLED(None, SLED_PATH, SLED_NAME)
+        led = SystemLED(None, SLED_PATH, SLED_NAME)
         led.on()
         mock_make_event.assert_called_once_with(1)
         mock_post_init.assert_called_once_with()
 
-    @mock.patch.object(inputs.SystemLED, '_make_event')
-    @mock.patch.object(inputs.SystemLED, '_post_init')
+    @mock.patch.object(SystemLED, '_make_event')
+    @mock.patch.object(SystemLED, '_post_init')
     def test_sled_off(self, mock_post_init, mock_make_event):
         """SystemLED.off makes an event with value 0."""
-        led = inputs.SystemLED(None, SLED_PATH, SLED_NAME)
+        led = SystemLED(None, SLED_PATH, SLED_NAME)
         led.off()
         mock_make_event.assert_called_once_with(0)
         mock_post_init.assert_called_once_with()
@@ -242,7 +242,7 @@ class SystemLEDTestCase(TestCase):
     def test_sled_make_event(self, mock_write_device):
         """inputs.SLED._make_event sends an event to the write device."""
         manager = setup_mock_manager()
-        led = inputs.SystemLED(manager, SLED_PATH, SLED_NAME)
+        led = SystemLED(manager, SLED_PATH, SLED_NAME)
         led._make_event(1)
         self.assertEqual(len(mock_write_device.method_calls), 2)
         flush_call = mock_write_device.method_calls[1]
@@ -259,5 +259,5 @@ class SystemLEDTestCase(TestCase):
     def test_sled_match_device(self, mock_write_device):
         """inputs.SLED._match device finds a device."""
         manager = setup_mock_manager()
-        led = inputs.SystemLED(manager, SLED_PATH, SLED_NAME)
+        led = SystemLED(manager, SLED_PATH, SLED_NAME)
         self.assertTrue(led.device)

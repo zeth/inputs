@@ -4,7 +4,10 @@ from unittest import TestCase
 
 import inputs
 
-from inputs.platforms.mac.mouse import QuartzMouseBaseListener
+from inputs.platforms import BaseListener
+from inputs.platforms.mac.keyboard import AppKitKeyboardListener
+from inputs.platforms.mac.mouse.appkit import AppKitMouseBaseListener
+from inputs.platforms.mac.mouse.listener import QuartzMouseBaseListener
 from tests.constants import mock, PYTHON
 if PYTHON == 3:
     mock._magics.add('__round__')
@@ -29,13 +32,13 @@ class BaseListenerTestCase(TestCase):
     def test_init(self):
         """The listener has type_codes."""
         pipe = mock.MagicMock()
-        listener = inputs.BaseListener(pipe)
+        listener = BaseListener(pipe)
         self.assertEqual(len(listener.type_codes), 14)
 
     def test_get_timeval(self):
         """Gives seconds and microseconds."""
         pipe = mock.MagicMock()
-        listener = inputs.BaseListener(pipe)
+        listener = BaseListener(pipe)
         seconds, microseconds = listener.get_timeval()
         self.assertTrue(seconds > 0)
         self.assertTrue(microseconds > 0)
@@ -43,7 +46,7 @@ class BaseListenerTestCase(TestCase):
     def test_set_timeval(self):
         """Sets the cached timeval."""
         pipe = mock.MagicMock()
-        listener = inputs.BaseListener(pipe)
+        listener = BaseListener(pipe)
 
         # We start with no timeval
         self.assertIsNone(listener.timeval)
@@ -57,7 +60,7 @@ class BaseListenerTestCase(TestCase):
     def test_create_key_event_object(self):
         """It should create an evdev object."""
         pipe = mock.MagicMock()
-        listener = inputs.BaseListener(pipe)
+        listener = BaseListener(pipe)
         eventlist = listener.create_event_object("Key", 30, 1, (100, 0))
         event_info = next(inputs.iter_unpack(eventlist))
         self.assertEqual(event_info, (100, 0, 1, 30, 1))
@@ -65,7 +68,7 @@ class BaseListenerTestCase(TestCase):
     def test_create_mouse_event_object(self):
         """It also should create an evdev object."""
         pipe = mock.MagicMock()
-        listener = inputs.BaseListener(pipe)
+        listener = BaseListener(pipe)
         eventlist = listener.create_event_object("Absolute", 0, 285, (100, 1))
         event_info = next(inputs.iter_unpack(eventlist))
         self.assertEqual(event_info, (100, 1, 3, 0, 285))
@@ -73,14 +76,14 @@ class BaseListenerTestCase(TestCase):
     def test_create_banana_event_object(self):
         """It should raise an exception."""
         pipe = mock.MagicMock()
-        listener = inputs.BaseListener(pipe)
+        listener = BaseListener(pipe)
         with self.assertRaises(inputs.UnknownEventType):
             listener.create_event_object("Banana", 0, 285, (100, 1))
 
     def test_create_ev_wo_timeval(self):
         """It should create an evdev object."""
         pipe = mock.MagicMock()
-        listener = inputs.BaseListener(pipe)
+        listener = BaseListener(pipe)
         eventlist = listener.create_event_object("Key", 30, 1)
         event_info = next(inputs.iter_unpack(eventlist))
         self.assertTrue(event_info[0] > 0)
@@ -90,7 +93,7 @@ class BaseListenerTestCase(TestCase):
     def test_write_to_pipe(self):
         """Subprocess sends data back to the class in the mainprocess."""
         pipe = mock.MagicMock()
-        listener = inputs.BaseListener(pipe)
+        listener = BaseListener(pipe)
         listener.write_to_pipe([b'Green Eggs', b' and ', b'Ham'])
         send_bytes_call = pipe.method_calls[0]
         method_name = send_bytes_call[0]
@@ -101,7 +104,7 @@ class BaseListenerTestCase(TestCase):
     def test_emulate_wheel_x(self):
         """Returns an event list for the x mouse wheel turn."""
         pipe = mock.MagicMock()
-        listener = inputs.BaseListener(pipe)
+        listener = BaseListener(pipe)
         eventlist = listener.emulate_wheel(20, 'x', (100, 1))
         event_info = next(inputs.iter_unpack(eventlist))
         self.assertEqual(event_info, (100, 1, 2, 6, 20))
@@ -113,7 +116,7 @@ class BaseListenerTestCase(TestCase):
     def test_emulate_wheel_y(self):
         """Returns an event list for the y mouse wheel turn."""
         pipe = mock.MagicMock()
-        listener = inputs.BaseListener(pipe)
+        listener = BaseListener(pipe)
         eventlist = listener.emulate_wheel(20, 'y', (100, 1))
         event_info = next(inputs.iter_unpack(eventlist))
         self.assertEqual(event_info, (100, 1, 2, 8, 20))
@@ -125,7 +128,7 @@ class BaseListenerTestCase(TestCase):
     def test_emulate_wheel_z(self):
         """Returns an event list for the z mouse wheel turn."""
         pipe = mock.MagicMock()
-        listener = inputs.BaseListener(pipe)
+        listener = BaseListener(pipe)
         eventlist = listener.emulate_wheel(20, 'z', (100, 1))
         event_info = next(inputs.iter_unpack(eventlist))
         self.assertEqual(event_info, (100, 1, 2, 7, 20))
@@ -138,7 +141,7 @@ class BaseListenerTestCase(TestCase):
         """Returns an event list for the mouse wheel turn on Windows."""
         inputs.WIN = True
         pipe = mock.MagicMock()
-        listener = inputs.BaseListener(pipe)
+        listener = BaseListener(pipe)
         eventlist = listener.emulate_wheel(240, 'x', (100, 1))
         event_info = next(inputs.iter_unpack(eventlist))
         self.assertEqual(event_info, (100, 1, 2, 6, 2))
@@ -151,7 +154,7 @@ class BaseListenerTestCase(TestCase):
     def test_emulate_rel(self):
         """Returns an event list for relative mouse movement."""
         pipe = mock.MagicMock()
-        listener = inputs.BaseListener(pipe)
+        listener = BaseListener(pipe)
 
         eventlist = listener.emulate_rel(0, 1, (100, 1))
         event_info = next(inputs.iter_unpack(eventlist))
@@ -172,7 +175,7 @@ class BaseListenerTestCase(TestCase):
     def test_emulate_press_down(self):
         """Returns an event list for button."""
         pipe = mock.MagicMock()
-        listener = inputs.BaseListener(pipe)
+        listener = BaseListener(pipe)
 
         scan_list, button_list = listener.emulate_press(
             272, 589825, 1, (100, 1))
@@ -185,7 +188,7 @@ class BaseListenerTestCase(TestCase):
     def test_emulate_press_up(self):
         """Returns an event list for button."""
         pipe = mock.MagicMock()
-        listener = inputs.BaseListener(pipe)
+        listener = BaseListener(pipe)
 
         scan_list, button_list = listener.emulate_press(
             272, 589825, 0, (100, 1))
@@ -198,7 +201,7 @@ class BaseListenerTestCase(TestCase):
     def test_emulate_repeat(self):
         """Returns a repeat event, e.g. doubleclick, triple click."""
         pipe = mock.MagicMock()
-        listener = inputs.BaseListener(pipe)
+        listener = BaseListener(pipe)
 
         repeat_list = listener.emulate_repeat(1, (100, 1))
         repeat_info = next(inputs.iter_unpack(repeat_list))
@@ -215,7 +218,7 @@ class BaseListenerTestCase(TestCase):
     def test_sync_marker(self):
         """Returns a sync marker."""
         pipe = mock.MagicMock()
-        listener = inputs.BaseListener(pipe)
+        listener = BaseListener(pipe)
 
         sync_list = listener.sync_marker((100, 1))
         sync_info = next(inputs.iter_unpack(sync_list))
@@ -228,7 +231,7 @@ class BaseListenerTestCase(TestCase):
     def test_emulate_abs(self):
         """Returns absolute mouse event."""
         pipe = mock.MagicMock()
-        listener = inputs.BaseListener(pipe)
+        listener = BaseListener(pipe)
 
         x_list, y_list = listener.emulate_abs(1324, 246, (100, 1))
         x_info = next(inputs.iter_unpack(x_list))
@@ -533,14 +536,14 @@ class AppKitMouseBaseListenerTestCase(TestCase):
     def test_init(self):
         """The created object has properties."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitMouseBaseListener(pipe)
+        listener = AppKitMouseBaseListener(pipe)
         self.assertEqual(listener.events, [])
         self.assertEqual(listener.codes[1][0], 'Key')
 
     def test_get_mouse_button_number(self):
         """Get mouse number calls buttonNumber method."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitMouseBaseListener(pipe)
+        listener = AppKitMouseBaseListener(pipe)
         event = mock.MagicMock()
         button_number = listener._get_mouse_button_number(event)
         call = event.method_calls[0]
@@ -550,7 +553,7 @@ class AppKitMouseBaseListenerTestCase(TestCase):
     def test_get_absolute(self):
         """Get absolute calls locationInWindow method."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitMouseBaseListener(pipe)
+        listener = AppKitMouseBaseListener(pipe)
         event = mock.MagicMock()
         button_number = listener._get_absolute(event)
         call = event.method_calls[0]
@@ -560,7 +563,7 @@ class AppKitMouseBaseListenerTestCase(TestCase):
     def test_get_deltas(self):
         """Get deltas calls delta methods."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitMouseBaseListener(pipe)
+        listener = AppKitMouseBaseListener(pipe)
         event = mock.MagicMock()
         button_number = listener._get_deltas(event)
         self.assertEqual(len(button_number), 3)
@@ -574,7 +577,7 @@ class AppKitMouseBaseListenerTestCase(TestCase):
     def test_get_event_type(self):
         """Get event type called type()."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitMouseBaseListener(pipe)
+        listener = AppKitMouseBaseListener(pipe)
         event = mock.MagicMock()
         event_type = listener._get_event_type(event)
         call = event.method_calls[0]
@@ -582,13 +585,13 @@ class AppKitMouseBaseListenerTestCase(TestCase):
         event_type.assert_not_called()
 
     @mock.patch.object(
-        inputs.AppKitMouseBaseListener,
+        AppKitMouseBaseListener,
         '_get_mouse_button_number',
         return_value=2)
     def test_handle_button(self, mock_get_mouse_button_number):
         """Mouse click produces an event."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitMouseBaseListener(pipe)
+        listener = AppKitMouseBaseListener(pipe)
         # Events begin empty
         self.assertEqual(listener.events, [])
         event = mock.MagicMock(return_value=1)
@@ -602,14 +605,14 @@ class AppKitMouseBaseListenerTestCase(TestCase):
         self.assertEqual(second_event[2:], (1, 274, 1))
 
     @mock.patch.object(
-        inputs.AppKitMouseBaseListener,
+        AppKitMouseBaseListener,
         '_get_absolute',
         return_value=MockPoint())
     def test_handle_absolute(self,
                              mock_get_absolute):
         """Absolute mouse event is processed."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitMouseBaseListener(pipe)
+        listener = AppKitMouseBaseListener(pipe)
         # Events begin empty
         self.assertEqual(listener.events, [])
 
@@ -631,14 +634,14 @@ class AppKitMouseBaseListenerTestCase(TestCase):
         mock_get_absolute.assert_called_once_with(event)
 
     @mock.patch.object(
-        inputs.AppKitMouseBaseListener,
+        AppKitMouseBaseListener,
         '_get_deltas',
         return_value=(5, 5, 5))
     def test_handle_scrollwheel(self,
                                 mock_get_deltas):
         """Scroll wheel event is processed."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitMouseBaseListener(pipe)
+        listener = AppKitMouseBaseListener(pipe)
         # Events begin empty
         self.assertEqual(listener.events, [])
 
@@ -664,14 +667,14 @@ class AppKitMouseBaseListenerTestCase(TestCase):
         mock_get_deltas.assert_called_once_with(event)
 
     @mock.patch.object(
-        inputs.AppKitMouseBaseListener,
+        AppKitMouseBaseListener,
         '_get_deltas',
         return_value=(5, 5, 5))
     def test_handle_relative(self,
                              mock_get_deltas):
         """Relative position is processed."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitMouseBaseListener(pipe)
+        listener = AppKitMouseBaseListener(pipe)
         # Events begin empty
         self.assertEqual(listener.events, [])
 
@@ -697,20 +700,20 @@ class AppKitMouseBaseListenerTestCase(TestCase):
         mock_get_deltas.assert_called_once_with(event)
 
     @mock.patch.object(
-        inputs.AppKitMouseBaseListener,
+        AppKitMouseBaseListener,
         'write_to_pipe')
     @mock.patch.object(
-        inputs.AppKitMouseBaseListener,
+        AppKitMouseBaseListener,
         'handle_button')
     @mock.patch.object(
-        inputs.AppKitMouseBaseListener,
+        AppKitMouseBaseListener,
         'handle_scrollwheel')
     @mock.patch.object(
-        inputs.AppKitMouseBaseListener,
+        AppKitMouseBaseListener,
         '_get_event_type',
         return_value=22)
     @mock.patch.object(
-        inputs.AppKitMouseBaseListener,
+        AppKitMouseBaseListener,
         'handle_absolute')
     def test_handle_input_with_scroll(self,
                                       mock_handle_absolute,
@@ -722,7 +725,7 @@ class AppKitMouseBaseListenerTestCase(TestCase):
         # pylint: disable=too-many-arguments
 
         pipe = mock.MagicMock()
-        listener = inputs.AppKitMouseBaseListener(pipe)
+        listener = AppKitMouseBaseListener(pipe)
 
         event = mock.MagicMock()
         event_type = mock.MagicMock()
@@ -738,20 +741,20 @@ class AppKitMouseBaseListenerTestCase(TestCase):
         mock_write_to_pipe.assert_called_once()
 
     @mock.patch.object(
-        inputs.AppKitMouseBaseListener,
+        AppKitMouseBaseListener,
         'write_to_pipe')
     @mock.patch.object(
-        inputs.AppKitMouseBaseListener,
+        AppKitMouseBaseListener,
         'handle_button')
     @mock.patch.object(
-        inputs.AppKitMouseBaseListener,
+        AppKitMouseBaseListener,
         '_get_event_type',
         return_value=1)
     @mock.patch.object(
-        inputs.AppKitMouseBaseListener,
+        AppKitMouseBaseListener,
         'handle_relative')
     @mock.patch.object(
-        inputs.AppKitMouseBaseListener,
+        AppKitMouseBaseListener,
         'handle_absolute')
     def test_handle_input_relative(self,
                                    mock_handle_absolute,
@@ -762,7 +765,7 @@ class AppKitMouseBaseListenerTestCase(TestCase):
         """Mouse events are processed."""
         # pylint: disable=too-many-arguments
         pipe = mock.MagicMock()
-        listener = inputs.AppKitMouseBaseListener(pipe)
+        listener = AppKitMouseBaseListener(pipe)
 
         event = mock.MagicMock()
         event_type = mock.MagicMock()
@@ -784,7 +787,7 @@ class AppKitKeyboardListenerTestCase(TestCase):
     def test_init(self):
         """The created object knows the keyboard codes."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitKeyboardListener(pipe)
+        listener = AppKitKeyboardListener(pipe)
         self.assertEqual(listener.events, [])
         self.assertEqual(listener.codes[0], 30)
         self.assertEqual(listener.codes[120], 60)
@@ -793,7 +796,7 @@ class AppKitKeyboardListenerTestCase(TestCase):
     def test_get_event_key_code(self):
         """Get event type called keyCode()."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitKeyboardListener(pipe)
+        listener = AppKitKeyboardListener(pipe)
         event = mock.MagicMock()
         event_type = listener._get_event_key_code(event)
         call = event.method_calls[0]
@@ -803,7 +806,7 @@ class AppKitKeyboardListenerTestCase(TestCase):
     def test_get_event_type(self):
         """Get event type called type()."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitKeyboardListener(pipe)
+        listener = AppKitKeyboardListener(pipe)
         event = mock.MagicMock()
         event_type = listener._get_event_type(event)
         call = event.method_calls[0]
@@ -813,7 +816,7 @@ class AppKitKeyboardListenerTestCase(TestCase):
     def test_get_flag_value(self):
         """Get event flags calls event.modifierFlags()."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitKeyboardListener(pipe)
+        listener = AppKitKeyboardListener(pipe)
         event = mock.MagicMock()
         flag_value = listener._get_flag_value(event)
         call = event.method_calls[0]
@@ -825,7 +828,7 @@ class AppKitKeyboardListenerTestCase(TestCase):
     def test_get_flag_value_something(self):
         """Get event flags calls event.modifierFlags()."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitKeyboardListener(pipe)
+        listener = AppKitKeyboardListener(pipe)
         event = mock.MagicMock()
         modifier_flags = mock.MagicMock(return_value=256)
         event.attach_mock(modifier_flags, 'modifierFlags')
@@ -837,7 +840,7 @@ class AppKitKeyboardListenerTestCase(TestCase):
     def test_get_key_value_type_10(self):
         """Event type 10 should return 1."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitKeyboardListener(pipe)
+        listener = AppKitKeyboardListener(pipe)
         event = mock.MagicMock()
         key_value = listener._get_key_value(event, 10)
         self.assertEqual(key_value, 1)
@@ -845,7 +848,7 @@ class AppKitKeyboardListenerTestCase(TestCase):
     def test_get_key_value_type_11(self):
         """Event type 11 should return 0."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitKeyboardListener(pipe)
+        listener = AppKitKeyboardListener(pipe)
         event = mock.MagicMock()
         key_value = listener._get_key_value(event, 11)
         self.assertEqual(key_value, 0)
@@ -853,7 +856,7 @@ class AppKitKeyboardListenerTestCase(TestCase):
     def test_get_key_value_other_type(self):
         """Unknown event type should return -1."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitKeyboardListener(pipe)
+        listener = AppKitKeyboardListener(pipe)
         event = mock.MagicMock()
         key_value = listener._get_key_value(event, 15)
         self.assertEqual(key_value, -1)
@@ -861,24 +864,24 @@ class AppKitKeyboardListenerTestCase(TestCase):
     def test_get_key_value_type_12(self):
         """Event type 12 should check the flag value."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitKeyboardListener(pipe)
+        listener = AppKitKeyboardListener(pipe)
         event = mock.MagicMock()
         key_value = listener._get_key_value(event, 12)
         self.assertEqual(key_value, 1)
 
     @mock.patch.object(
-        inputs.AppKitKeyboardListener,
+        AppKitKeyboardListener,
         'write_to_pipe')
     @mock.patch.object(
-        inputs.AppKitKeyboardListener,
+        AppKitKeyboardListener,
         '_get_flag_value',
         return_value=0)
     @mock.patch.object(
-        inputs.AppKitKeyboardListener,
+        AppKitKeyboardListener,
         '_get_event_type',
         return_value=10)
     @mock.patch.object(
-        inputs.AppKitKeyboardListener,
+        AppKitKeyboardListener,
         '_get_event_key_code',
         return_value=4)
     def test_handle_input(self,
@@ -888,7 +891,7 @@ class AppKitKeyboardListenerTestCase(TestCase):
                           mock_write_to_pipe):
         """Mac Keyboard events are processed."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitKeyboardListener(pipe)
+        listener = AppKitKeyboardListener(pipe)
         event = mock.MagicMock()
         listener.handle_input(event)
         self.assertEqual(len(listener.events), 3)
@@ -899,18 +902,18 @@ class AppKitKeyboardListenerTestCase(TestCase):
         mock_write_to_pipe.assert_called_once_with(listener.events)
 
     @mock.patch.object(
-        inputs.AppKitKeyboardListener,
+        AppKitKeyboardListener,
         'write_to_pipe')
     @mock.patch.object(
-        inputs.AppKitKeyboardListener,
+        AppKitKeyboardListener,
         '_get_flag_value',
         return_value=0)
     @mock.patch.object(
-        inputs.AppKitKeyboardListener,
+        AppKitKeyboardListener,
         '_get_event_type',
         return_value=10)
     @mock.patch.object(
-        inputs.AppKitKeyboardListener,
+        AppKitKeyboardListener,
         '_get_event_key_code',
         return_value=256)
     def test_handle_input_unknown_code(self,
@@ -920,7 +923,7 @@ class AppKitKeyboardListenerTestCase(TestCase):
                                        mock_write_to_pipe):
         """Mac Keyboard events are processed."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitKeyboardListener(pipe)
+        listener = AppKitKeyboardListener(pipe)
         event = mock.MagicMock()
         listener.handle_input(event)
         self.assertEqual(len(listener.events), 3)

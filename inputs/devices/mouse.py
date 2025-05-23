@@ -1,8 +1,7 @@
 from inputs.constants import APPKIT_MOUSE_PATH
 from inputs.devices.common import InputDevice
 from inputs.platforms import MAC, NIX, WIN
-from inputs.platforms.mac.mouse import appkit_mouse_process
-from inputs.platforms.win.mouse import mouse_process
+
 
 
 class Mouse(InputDevice):
@@ -23,9 +22,13 @@ class Mouse(InputDevice):
     @staticmethod
     def _get_target_function():
         """Get the correct target function."""
+        # TODO: Replace with subclassing?
         if WIN:
+            from inputs.platforms.win.mouse import mouse_process
+
             return mouse_process
         if MAC:
+            from inputs.platforms.mac.mouse import appkit_mouse_process
             return appkit_mouse_process
         return None
 
