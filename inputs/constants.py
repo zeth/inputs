@@ -1,3 +1,6 @@
+"""Constants for input devices."""
+
+
 SPECIAL_DEVICES = (
     (
         "Raspberry Pi Sense HAT Joystick",

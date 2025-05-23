@@ -1,3 +1,6 @@
+"""Underlying C utilities for the input module."""
+
+
 # Standard event format for most devices.
 # long, long, unsigned short, unsigned short, int
 import math
