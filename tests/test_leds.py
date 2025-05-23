@@ -4,11 +4,9 @@ from unittest import TestCase
 import errno
 import os
 
+from inputs.devices.led import LED
+from inputs.utils import iter_unpack
 from tests.constants import mock, PurePath, PYTHON
-
-import inputs
-if PYTHON == 2:
-    from inputs import PermissionError  # pylint: disable=redefined-builtin
 
 RAW = ""
 
@@ -19,7 +17,7 @@ RAW = ""
 PATH = '/sys/class/leds/input99::capslock'
 NAME = 'input99::capslock'
 CHARFILE = 'MY_CHARACTER_FILE'
-REPL = 'inputs.LED("/sys/class/leds/input99::capslock")'
+REPL = 'LED("/sys/class/leds/input99::capslock")'
 CHARPATH = '/dev/input/event99'
 
 
@@ -27,70 +25,70 @@ class LEDTestCase(TestCase):
     """Test the LED class."""
     def test_led_init(self):
         """The init method stores the path and name."""
-        led = inputs.LED(None, PATH, NAME)
+        led = LED(None, PATH, NAME)
         self.assertEqual(led.path, PATH)
         self.assertEqual(led.name, NAME)
 
     def test_led_str(self):
         """The str method gives the name."""
-        led = inputs.LED(None, PATH, NAME)
+        led = LED(None, PATH, NAME)
         self.assertEqual(str(led), NAME)
 
     def test_led_repr(self):
         """The repr method shows the path."""
-        led = inputs.LED(None, PATH, NAME)
+        led = LED(None, PATH, NAME)
         self.assertEqual(repr(led), REPL)
 
-    @mock.patch('inputs.open', mock.mock_open(read_data='1'))
+    @mock.patch('inputs.devices.led.open', mock.mock_open(read_data='1'))
     def test_led_status(self):
         """Status returns the brightness level as an int."""
-        led = inputs.LED(None, PATH, NAME)
+        led = LED(None, PATH, NAME)
         status = led.status()
         self.assertEqual(status, 1)
 
-    @mock.patch('inputs.open', mock.mock_open(read_data='Hello'))
+    @mock.patch('inputs.devices.led.open', mock.mock_open(read_data='Hello'))
     def test_led_status_non_num(self):
         """Status returns the brightness level as a string."""
-        led = inputs.LED(None, PATH, NAME)
+        led = LED(None, PATH, NAME)
         status = led.status()
         self.assertEqual(status, 'Hello')
 
-    @mock.patch('inputs.open', mock.mock_open(read_data='2'))
+    @mock.patch('inputs.devices.led.open', mock.mock_open(read_data='2'))
     def test_max_brightness_int(self):
         """max_brightness returns the maximim level as an int."""
-        led = inputs.LED(None, PATH, NAME)
+        led = LED(None, PATH, NAME)
         max_brightness = led.max_brightness()
         self.assertEqual(max_brightness, 2)
 
-    @mock.patch('inputs.open', mock.mock_open(read_data='Brilliant'))
+    @mock.patch('inputs.devices.led.open', mock.mock_open(read_data='Brilliant'))
     def test_led_max_brightness_non_num(self):
         """Status returns the max brightness level as a string."""
-        led = inputs.LED(None, PATH, NAME)
+        led = LED(None, PATH, NAME)
         max_brightness = led.max_brightness()
         self.assertEqual(max_brightness, 'Brilliant')
 
     @mock.patch('io.open', return_value=CHARFILE)
     def test_write_device(self, mock_io_open):
         """Write device calls io.open."""
-        inputs.NIX = True
-        led = inputs.LED(None, PATH, NAME)
+        NIX = True
+        led = LED(None, PATH, NAME)
         led._character_device_path = CHARPATH
         self.assertEqual(led._write_device, CHARFILE)
         mock_io_open.assert_called_with(CHARPATH, 'wb')
 
     def test_write_device_non_linux(self):
         """Write device doesn't try yet on non-Linux."""
-        inputs.NIX = False
-        led = inputs.LED(None, PATH, NAME)
+        NIX = False
+        led = LED(None, PATH, NAME)
         self.assertEqual(led._write_device, None)
-        inputs.NIX = True
+        NIX = True
 
     @mock.patch('io.open')
     def test_write_device_perm_error(self, mock_io_open):
         """Write device raises a permissions error, Python 3 style."""
         mock_io_open.side_effect = PermissionError()
-        inputs.NIX = True
-        led = inputs.LED(None, PATH, NAME)
+        NIX = True
+        led = LED(None, PATH, NAME)
         led._character_device_path = CHARPATH
         with self.assertRaises(PermissionError):
             led._write_device  # pylint: disable=pointless-statement
@@ -99,8 +97,8 @@ class LEDTestCase(TestCase):
     def test_write_device_io_error_perm(self, mock_io_open):
         """Write device raises an io error, Python 2 style."""
         mock_io_open.side_effect = IOError(errno.EACCES, 'Boom')
-        inputs.NIX = True
-        led = inputs.LED(None, PATH, NAME)
+        NIX = True
+        led = LED(None, PATH, NAME)
         led._character_device_path = CHARPATH
         with self.assertRaises(PermissionError):
             led._write_device  # pylint: disable=pointless-statement
@@ -109,16 +107,16 @@ class LEDTestCase(TestCase):
     def test_write_device_other_ioerror(self, mock_io_open):
         """Write device raises an io error for other disk issues."""
         mock_io_open.side_effect = IOError(errno.EMFILE, 'Boom')
-        inputs.NIX = True
-        led = inputs.LED(None, PATH, NAME)
+        NIX = True
+        led = LED(None, PATH, NAME)
         led._character_device_path = CHARPATH
         with self.assertRaises(IOError):
             led._write_device  # pylint: disable=pointless-statement
 
-    @mock.patch.object(inputs.LED, '_write_device')
+    @mock.patch.object(LED, '_write_device')
     def test_led_make_event(self, mock_write_device):
-        """inputs.LED._make_event sends an event to the write device."""
-        led = inputs.LED(None, PATH, NAME)
+        """LED._make_event sends an event to the write device."""
+        led = LED(None, PATH, NAME)
         led._make_event(1, 2, 3)
         self.assertEqual(len(mock_write_device.method_calls), 2)
         flush_call = mock_write_device.method_calls[1]
@@ -126,7 +124,7 @@ class LEDTestCase(TestCase):
         write_call = mock_write_device.method_calls[0]
         self.assertEqual(write_call[0], 'write')
         eventlist = write_call[1][0]
-        event_info = next(inputs.iter_unpack(eventlist))
+        event_info = next(iter_unpack(eventlist))
         self.assertTrue(event_info[0] > 0)
         self.assertTrue(event_info[1] > 0)
         self.assertEqual(event_info[2:], (1, 2, 3))
@@ -240,7 +238,7 @@ class SystemLEDTestCase(TestCase):
         mock_make_event.assert_called_once_with(0)
         mock_post_init.assert_called_once_with()
 
-    @mock.patch.object(inputs.LED, '_write_device')
+    @mock.patch.object(LED, '_write_device')
     def test_sled_make_event(self, mock_write_device):
         """inputs.SLED._make_event sends an event to the write device."""
         manager = setup_mock_manager()
@@ -257,7 +255,7 @@ class SystemLEDTestCase(TestCase):
         self.assertTrue(event_info[1] > 0)
         self.assertEqual(event_info[2:], (17, 1, 1))
 
-    @mock.patch.object(inputs.LED, '_write_device')
+    @mock.patch.object(LED, '_write_device')
     def test_sled_match_device(self, mock_write_device):
         """inputs.SLED._match device finds a device."""
         manager = setup_mock_manager()

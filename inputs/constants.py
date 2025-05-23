@@ -1,10 +1,16 @@
 SPECIAL_DEVICES = (
-    ("Raspberry Pi Sense HAT Joystick",
-     "/dev/input/by-id/gpio-Raspberry_Pi_Sense_HAT_Joystick-event-kbd"),
-    ("Nintendo Wii Remote",
-     "/dev/input/by-id/bluetooth-Nintendo_Wii_Remote-event-joystick"),
-    ("FT5406 memory based driver",
-     "/dev/input/by-id/gpio-Raspberry_Pi_Touchscreen_Display-event-mouse"),
+    (
+        "Raspberry Pi Sense HAT Joystick",
+        "/dev/input/by-id/gpio-Raspberry_Pi_Sense_HAT_Joystick-event-kbd",
+    ),
+    (
+        "Nintendo Wii Remote",
+        "/dev/input/by-id/bluetooth-Nintendo_Wii_Remote-event-joystick",
+    ),
+    (
+        "FT5406 memory based driver",
+        "/dev/input/by-id/gpio-Raspberry_Pi_Touchscreen_Display-event-mouse",
+    ),
 )
 
 XINPUT_MAPPING = (
@@ -12,10 +18,10 @@ XINPUT_MAPPING = (
     (2, 0x11),
     (3, 0x10),
     (4, 0x10),
-    (5, 0x13a),
-    (6, 0x13b),
-    (7, 0x13d),
-    (8, 0x13e),
+    (5, 0x13A),
+    (6, 0x13B),
+    (7, 0x13D),
+    (8, 0x13E),
     (9, 0x136),
     (10, 0x137),
     (13, 0x130),
@@ -23,12 +29,12 @@ XINPUT_MAPPING = (
     (15, 0x134),
     (16, 0x133),
     (17, 0x11),
-    ('l_thumb_x', 0x00),
-    ('l_thumb_y', 0x01),
-    ('left_trigger', 0x02),
-    ('r_thumb_x', 0x03),
-    ('r_thumb_y', 0x04),
-    ('right_trigger', 0x05),
+    ("l_thumb_x", 0x00),
+    ("l_thumb_y", 0x01),
+    ("left_trigger", 0x02),
+    ("r_thumb_x", 0x03),
+    ("r_thumb_y", 0x04),
+    ("right_trigger", 0x05),
 )
 
 XINPUT_DLL_NAMES = (
@@ -36,29 +42,29 @@ XINPUT_DLL_NAMES = (
     "XInput9_1_0.dll",
     "XInput1_3.dll",
     "XInput1_2.dll",
-    "XInput1_1.dll"
+    "XInput1_1.dll",
 )
 
 XINPUT_ERROR_DEVICE_NOT_CONNECTED = 1167
 XINPUT_ERROR_SUCCESS = 0
 
 XBOX_STYLE_LED_CONTROL = {
-    0: 'off',
-    1: 'all blink, then previous setting',
-    2: '1/top-left blink, then on',
-    3: '2/top-right blink, then on',
-    4: '3/bottom-left blink, then on',
-    5: '4/bottom-right blink, then on',
-    6: '1/top-left on',
-    7: '2/top-right on',
-    8: '3/bottom-left on',
-    9: '4/bottom-right on',
-    10: 'rotate',
-    11: 'blink, based on previous setting',
-    12: 'slow blink, based on previous setting',
-    13: 'rotate with two lights',
-    14: 'persistent slow all blink',
-    15: 'blink once, then previous setting'
+    0: "off",
+    1: "all blink, then previous setting",
+    2: "1/top-left blink, then on",
+    3: "2/top-right blink, then on",
+    4: "3/bottom-left blink, then on",
+    5: "4/bottom-right blink, then on",
+    6: "1/top-left on",
+    7: "2/top-right on",
+    8: "3/bottom-left on",
+    9: "4/bottom-right on",
+    10: "rotate",
+    11: "blink, based on previous setting",
+    12: "slow blink, based on previous setting",
+    13: "rotate with two lights",
+    14: "persistent slow all blink",
+    15: "blink once, then previous setting",
 }
 
 DEVICE_PROPERTIES = (
@@ -69,8 +75,9 @@ DEVICE_PROPERTIES = (
     (0x04, "INPUT_PROP_TOPBUTTONPAD"),  # softbuttons at top of pad
     (0x05, "INPUT_PROP_POINTING_STICK"),  # is a pointing stick
     (0x06, "INPUT_PROP_ACCELEROMETER"),  # has accelerometer
-    (0x1f, "INPUT_PROP_MAX"),
-    (0x1f + 1, "INPUT_PROP_CNT"))
+    (0x1F, "INPUT_PROP_MAX"),
+    (0x1F + 1, "INPUT_PROP_CNT"),
+)
 
 EVENT_TYPES = (
     (0x00, "Sync"),
@@ -85,16 +92,18 @@ EVENT_TYPES = (
     (0x15, "ForceFeedback"),
     (0x16, "Power"),
     (0x17, "ForceFeedbackStatus"),
-    (0x1f, "Max"),
-    (0x1f+1, "Current"))
+    (0x1F, "Max"),
+    (0x1F + 1, "Current"),
+)
 
 SYNCHRONIZATION_EVENTS = (
     (0, "SYN_REPORT"),
     (1, "SYN_CONFIG"),
     (2, "SYN_MT_REPORT"),
     (3, "SYN_DROPPED"),
-    (0xf, "SYN_MAX"),
-    (0xf+1, "SYN_CNT"))
+    (0xF, "SYN_MAX"),
+    (0xF + 1, "SYN_CNT"),
+)
 
 KEYS_AND_BUTTONS = (
     (0, "KEY_RESERVED"),
@@ -371,9 +380,9 @@ KEYS_AND_BUTTONS = (
     (0x127, "BTN_BASE2"),
     (0x128, "BTN_BASE3"),
     (0x129, "BTN_BASE4"),
-    (0x12a, "BTN_BASE5"),
-    (0x12b, "BTN_BASE6"),
-    (0x12f, "BTN_DEAD"),
+    (0x12A, "BTN_BASE5"),
+    (0x12B, "BTN_BASE6"),
+    (0x12F, "BTN_DEAD"),
     (0x130, "BTN_GAMEPAD"),
     (0x130, "BTN_SOUTH"),
     (0x131, "BTN_EAST"),
@@ -385,11 +394,11 @@ KEYS_AND_BUTTONS = (
     (0x137, "BTN_TR"),
     (0x138, "BTN_TL2"),
     (0x139, "BTN_TR2"),
-    (0x13a, "BTN_SELECT"),
-    (0x13b, "BTN_START"),
-    (0x13c, "BTN_MODE"),
-    (0x13d, "BTN_THUMBL"),
-    (0x13e, "BTN_THUMBR"),
+    (0x13A, "BTN_SELECT"),
+    (0x13B, "BTN_START"),
+    (0x13C, "BTN_MODE"),
+    (0x13D, "BTN_THUMBL"),
+    (0x13E, "BTN_THUMBR"),
     (0x140, "BTN_DIGI"),
     (0x140, "BTN_TOOL_PEN"),
     (0x141, "BTN_TOOL_RUBBER"),
@@ -400,12 +409,12 @@ KEYS_AND_BUTTONS = (
     (0x146, "BTN_TOOL_MOUSE"),
     (0x147, "BTN_TOOL_LENS"),
     (0x148, "BTN_TOOL_QUINTTAP"),  # Five fingers on trackpad
-    (0x14a, "BTN_TOUCH"),
-    (0x14b, "BTN_STYLUS"),
-    (0x14c, "BTN_STYLUS2"),
-    (0x14d, "BTN_TOOL_DOUBLETAP"),
-    (0x14e, "BTN_TOOL_TRIPLETAP"),
-    (0x14f, "BTN_TOOL_QUADTAP"),  # Four fingers on trackpad
+    (0x14A, "BTN_TOUCH"),
+    (0x14B, "BTN_STYLUS"),
+    (0x14C, "BTN_STYLUS2"),
+    (0x14D, "BTN_TOOL_DOUBLETAP"),
+    (0x14E, "BTN_TOOL_TRIPLETAP"),
+    (0x14F, "BTN_TOOL_QUADTAP"),  # Four fingers on trackpad
     (0x150, "BTN_WHEEL"),
     (0x150, "BTN_GEAR_DOWN"),
     (0x151, "BTN_GEAR_UP"),
@@ -419,12 +428,12 @@ KEYS_AND_BUTTONS = (
     (0x167, "KEY_TIME"),
     (0x168, "KEY_VENDOR"),
     (0x169, "KEY_ARCHIVE"),
-    (0x16a, "KEY_PROGRAM"),  # Media Select Program Guide
-    (0x16b, "KEY_CHANNEL"),
-    (0x16c, "KEY_FAVORITES"),
-    (0x16d, "KEY_EPG"),
-    (0x16e, "KEY_PVR"),  # Media Select Home
-    (0x16f, "KEY_MHP"),
+    (0x16A, "KEY_PROGRAM"),  # Media Select Program Guide
+    (0x16B, "KEY_CHANNEL"),
+    (0x16C, "KEY_FAVORITES"),
+    (0x16D, "KEY_EPG"),
+    (0x16E, "KEY_PVR"),  # Media Select Home
+    (0x16F, "KEY_MHP"),
     (0x170, "KEY_LANGUAGE"),
     (0x171, "KEY_TITLE"),
     (0x172, "KEY_SUBTITLE"),
@@ -435,12 +444,12 @@ KEYS_AND_BUTTONS = (
     (0x177, "KEY_SCREEN"),
     (0x178, "KEY_PC"),  # Media Select Computer
     (0x179, "KEY_TV"),  # Media Select TV
-    (0x17a, "KEY_TV2"),  # Media Select Cable
-    (0x17b, "KEY_VCR"),  # Media Select VCR
-    (0x17c, "KEY_VCR2"),  # VCR Plus
-    (0x17d, "KEY_SAT"),  # Media Select Satellite
-    (0x17e, "KEY_SAT2"),
-    (0x17f, "KEY_CD"),  # Media Select CD
+    (0x17A, "KEY_TV2"),  # Media Select Cable
+    (0x17B, "KEY_VCR"),  # Media Select VCR
+    (0x17C, "KEY_VCR2"),  # VCR Plus
+    (0x17D, "KEY_SAT"),  # Media Select Satellite
+    (0x17E, "KEY_SAT2"),
+    (0x17F, "KEY_CD"),  # Media Select CD
     (0x180, "KEY_TAPE"),  # Media Select Tape
     (0x181, "KEY_RADIO"),
     (0x182, "KEY_TUNER"),  # Media Select Tuner
@@ -451,12 +460,12 @@ KEYS_AND_BUTTONS = (
     (0x187, "KEY_MP3"),
     (0x188, "KEY_AUDIO"),  # AL Audio Browser
     (0x189, "KEY_VIDEO"),  # AL Movie Browser
-    (0x18a, "KEY_DIRECTORY"),
-    (0x18b, "KEY_LIST"),
-    (0x18c, "KEY_MEMO"),  # Media Select Messages
-    (0x18d, "KEY_CALENDAR"),
-    (0x18e, "KEY_RED"),
-    (0x18f, "KEY_GREEN"),
+    (0x18A, "KEY_DIRECTORY"),
+    (0x18B, "KEY_LIST"),
+    (0x18C, "KEY_MEMO"),  # Media Select Messages
+    (0x18D, "KEY_CALENDAR"),
+    (0x18E, "KEY_RED"),
+    (0x18F, "KEY_GREEN"),
     (0x190, "KEY_YELLOW"),
     (0x191, "KEY_BLUE"),
     (0x192, "KEY_CHANNELUP"),  # Channel Increment
@@ -467,74 +476,74 @@ KEYS_AND_BUTTONS = (
     (0x197, "KEY_NEXT"),
     (0x198, "KEY_RESTART"),
     (0x199, "KEY_SLOW"),
-    (0x19a, "KEY_SHUFFLE"),
-    (0x19b, "KEY_BREAK"),
-    (0x19c, "KEY_PREVIOUS"),
-    (0x19d, "KEY_DIGITS"),
-    (0x19e, "KEY_TEEN"),
-    (0x19f, "KEY_TWEN"),
-    (0x1a0, "KEY_VIDEOPHONE"),  # Media Select Video Phone
-    (0x1a1, "KEY_GAMES"),  # Media Select Games
-    (0x1a2, "KEY_ZOOMIN"),  # AC Zoom In
-    (0x1a3, "KEY_ZOOMOUT"),  # AC Zoom Out
-    (0x1a4, "KEY_ZOOMRESET"),  # AC Zoom
-    (0x1a5, "KEY_WORDPROCESSOR"),  # AL Word Processor
-    (0x1a6, "KEY_EDITOR"),  # AL Text Editor
-    (0x1a7, "KEY_SPREADSHEET"),  # AL Spreadsheet
-    (0x1a8, "KEY_GRAPHICSEDITOR"),  # AL Graphics Editor
-    (0x1a9, "KEY_PRESENTATION"),  # AL Presentation App
-    (0x1aa, "KEY_DATABASE"),  # AL Database App
-    (0x1ab, "KEY_NEWS"),  # AL Newsreader
-    (0x1ac, "KEY_VOICEMAIL"),  # AL Voicemail
-    (0x1ad, "KEY_ADDRESSBOOK"),  # AL Contacts/Address Book
-    (0x1ae, "KEY_MESSENGER"),  # AL Instant Messaging
-    (0x1af, "KEY_DISPLAYTOGGLE"),  # Turn display (LCD) on and off
-    (0x1b0, "KEY_SPELLCHECK"),  # AL Spell Check
-    (0x1b1, "KEY_LOGOFF"),  # AL Logoff
-    (0x1b2, "KEY_DOLLAR"),
-    (0x1b3, "KEY_EURO"),
-    (0x1b4, "KEY_FRAMEBACK"),  # Consumer - transport controls
-    (0x1b5, "KEY_FRAMEFORWARD"),
-    (0x1b6, "KEY_CONTEXT_MENU"),  # GenDesc - system context menu
-    (0x1b7, "KEY_MEDIA_REPEAT"),  # Consumer - transport control
-    (0x1b8, "KEY_10CHANNELSUP"),  # 10 channels up (10+)
-    (0x1b9, "KEY_10CHANNELSDOWN"),  # 10 channels down (10-)
-    (0x1ba, "KEY_IMAGES"),  # AL Image Browser
-    (0x1c0, "KEY_DEL_EOL"),
-    (0x1c1, "KEY_DEL_EOS"),
-    (0x1c2, "KEY_INS_LINE"),
-    (0x1c3, "KEY_DEL_LINE"),
-    (0x1d0, "KEY_FN"),
-    (0x1d1, "KEY_FN_ESC"),
-    (0x1d2, "KEY_FN_F1"),
-    (0x1d3, "KEY_FN_F2"),
-    (0x1d4, "KEY_FN_F3"),
-    (0x1d5, "KEY_FN_F4"),
-    (0x1d6, "KEY_FN_F5"),
-    (0x1d7, "KEY_FN_F6"),
-    (0x1d8, "KEY_FN_F7"),
-    (0x1d9, "KEY_FN_F8"),
-    (0x1da, "KEY_FN_F9"),
-    (0x1db, "KEY_FN_F10"),
-    (0x1dc, "KEY_FN_F11"),
-    (0x1dd, "KEY_FN_F12"),
-    (0x1de, "KEY_FN_1"),
-    (0x1df, "KEY_FN_2"),
-    (0x1e0, "KEY_FN_D"),
-    (0x1e1, "KEY_FN_E"),
-    (0x1e2, "KEY_FN_F"),
-    (0x1e3, "KEY_FN_S"),
-    (0x1e4, "KEY_FN_B"),
-    (0x1f1, "KEY_BRL_DOT1"),
-    (0x1f2, "KEY_BRL_DOT2"),
-    (0x1f3, "KEY_BRL_DOT3"),
-    (0x1f4, "KEY_BRL_DOT4"),
-    (0x1f5, "KEY_BRL_DOT5"),
-    (0x1f6, "KEY_BRL_DOT6"),
-    (0x1f7, "KEY_BRL_DOT7"),
-    (0x1f8, "KEY_BRL_DOT8"),
-    (0x1f9, "KEY_BRL_DOT9"),
-    (0x1fa, "KEY_BRL_DOT10"),
+    (0x19A, "KEY_SHUFFLE"),
+    (0x19B, "KEY_BREAK"),
+    (0x19C, "KEY_PREVIOUS"),
+    (0x19D, "KEY_DIGITS"),
+    (0x19E, "KEY_TEEN"),
+    (0x19F, "KEY_TWEN"),
+    (0x1A0, "KEY_VIDEOPHONE"),  # Media Select Video Phone
+    (0x1A1, "KEY_GAMES"),  # Media Select Games
+    (0x1A2, "KEY_ZOOMIN"),  # AC Zoom In
+    (0x1A3, "KEY_ZOOMOUT"),  # AC Zoom Out
+    (0x1A4, "KEY_ZOOMRESET"),  # AC Zoom
+    (0x1A5, "KEY_WORDPROCESSOR"),  # AL Word Processor
+    (0x1A6, "KEY_EDITOR"),  # AL Text Editor
+    (0x1A7, "KEY_SPREADSHEET"),  # AL Spreadsheet
+    (0x1A8, "KEY_GRAPHICSEDITOR"),  # AL Graphics Editor
+    (0x1A9, "KEY_PRESENTATION"),  # AL Presentation App
+    (0x1AA, "KEY_DATABASE"),  # AL Database App
+    (0x1AB, "KEY_NEWS"),  # AL Newsreader
+    (0x1AC, "KEY_VOICEMAIL"),  # AL Voicemail
+    (0x1AD, "KEY_ADDRESSBOOK"),  # AL Contacts/Address Book
+    (0x1AE, "KEY_MESSENGER"),  # AL Instant Messaging
+    (0x1AF, "KEY_DISPLAYTOGGLE"),  # Turn display (LCD) on and off
+    (0x1B0, "KEY_SPELLCHECK"),  # AL Spell Check
+    (0x1B1, "KEY_LOGOFF"),  # AL Logoff
+    (0x1B2, "KEY_DOLLAR"),
+    (0x1B3, "KEY_EURO"),
+    (0x1B4, "KEY_FRAMEBACK"),  # Consumer - transport controls
+    (0x1B5, "KEY_FRAMEFORWARD"),
+    (0x1B6, "KEY_CONTEXT_MENU"),  # GenDesc - system context menu
+    (0x1B7, "KEY_MEDIA_REPEAT"),  # Consumer - transport control
+    (0x1B8, "KEY_10CHANNELSUP"),  # 10 channels up (10+)
+    (0x1B9, "KEY_10CHANNELSDOWN"),  # 10 channels down (10-)
+    (0x1BA, "KEY_IMAGES"),  # AL Image Browser
+    (0x1C0, "KEY_DEL_EOL"),
+    (0x1C1, "KEY_DEL_EOS"),
+    (0x1C2, "KEY_INS_LINE"),
+    (0x1C3, "KEY_DEL_LINE"),
+    (0x1D0, "KEY_FN"),
+    (0x1D1, "KEY_FN_ESC"),
+    (0x1D2, "KEY_FN_F1"),
+    (0x1D3, "KEY_FN_F2"),
+    (0x1D4, "KEY_FN_F3"),
+    (0x1D5, "KEY_FN_F4"),
+    (0x1D6, "KEY_FN_F5"),
+    (0x1D7, "KEY_FN_F6"),
+    (0x1D8, "KEY_FN_F7"),
+    (0x1D9, "KEY_FN_F8"),
+    (0x1DA, "KEY_FN_F9"),
+    (0x1DB, "KEY_FN_F10"),
+    (0x1DC, "KEY_FN_F11"),
+    (0x1DD, "KEY_FN_F12"),
+    (0x1DE, "KEY_FN_1"),
+    (0x1DF, "KEY_FN_2"),
+    (0x1E0, "KEY_FN_D"),
+    (0x1E1, "KEY_FN_E"),
+    (0x1E2, "KEY_FN_F"),
+    (0x1E3, "KEY_FN_S"),
+    (0x1E4, "KEY_FN_B"),
+    (0x1F1, "KEY_BRL_DOT1"),
+    (0x1F2, "KEY_BRL_DOT2"),
+    (0x1F3, "KEY_BRL_DOT3"),
+    (0x1F4, "KEY_BRL_DOT4"),
+    (0x1F5, "KEY_BRL_DOT5"),
+    (0x1F6, "KEY_BRL_DOT6"),
+    (0x1F7, "KEY_BRL_DOT7"),
+    (0x1F8, "KEY_BRL_DOT8"),
+    (0x1F9, "KEY_BRL_DOT9"),
+    (0x1FA, "KEY_BRL_DOT10"),
     (0x200, "KEY_NUMERIC_0"),  # used by phones, remote controls,
     (0x201, "KEY_NUMERIC_1"),  # and other keypads
     (0x202, "KEY_NUMERIC_2"),
@@ -545,12 +554,12 @@ KEYS_AND_BUTTONS = (
     (0x207, "KEY_NUMERIC_7"),
     (0x208, "KEY_NUMERIC_8"),
     (0x209, "KEY_NUMERIC_9"),
-    (0x20a, "KEY_NUMERIC_STAR"),
-    (0x20b, "KEY_NUMERIC_POUND"),
-    (0x20c, "KEY_NUMERIC_A"),  # Phone key A - HUT Telephony 0xb9
-    (0x20d, "KEY_NUMERIC_B"),
-    (0x20e, "KEY_NUMERIC_C"),
-    (0x20f, "KEY_NUMERIC_D"),
+    (0x20A, "KEY_NUMERIC_STAR"),
+    (0x20B, "KEY_NUMERIC_POUND"),
+    (0x20C, "KEY_NUMERIC_A"),  # Phone key A - HUT Telephony 0xb9
+    (0x20D, "KEY_NUMERIC_B"),
+    (0x20E, "KEY_NUMERIC_C"),
+    (0x20F, "KEY_NUMERIC_D"),
     (0x210, "KEY_CAMERA_FOCUS"),
     (0x211, "KEY_WPS_BUTTON"),  # WiFi Protected Setup key
     (0x212, "KEY_TOUCHPAD_TOGGLE"),  # Request switch touchpad on or off
@@ -561,11 +570,11 @@ KEYS_AND_BUTTONS = (
     (0x217, "KEY_CAMERA_UP"),
     (0x218, "KEY_CAMERA_DOWN"),
     (0x219, "KEY_CAMERA_LEFT"),
-    (0x21a, "KEY_CAMERA_RIGHT"),
-    (0x21b, "KEY_ATTENDANT_ON"),
-    (0x21c, "KEY_ATTENDANT_OFF"),
-    (0x21d, "KEY_ATTENDANT_TOGGLE"),  # Attendant call on or off
-    (0x21e, "KEY_LIGHTS_TOGGLE"),  # Reading light on or off
+    (0x21A, "KEY_CAMERA_RIGHT"),
+    (0x21B, "KEY_ATTENDANT_ON"),
+    (0x21C, "KEY_ATTENDANT_OFF"),
+    (0x21D, "KEY_ATTENDANT_TOGGLE"),  # Attendant call on or off
+    (0x21E, "KEY_LIGHTS_TOGGLE"),  # Reading light on or off
     (0x220, "BTN_DPAD_UP"),
     (0x221, "BTN_DPAD_DOWN"),
     (0x222, "BTN_DPAD_LEFT"),
@@ -586,49 +595,50 @@ KEYS_AND_BUTTONS = (
     (0x263, "KEY_KBDINPUTASSIST_NEXTGROUP"),
     (0x264, "KEY_KBDINPUTASSIST_ACCEPT"),
     (0x265, "KEY_KBDINPUTASSIST_CANCEL"),
-    (0x2c0, "BTN_TRIGGER_HAPPY"),
-    (0x2c0, "BTN_TRIGGER_HAPPY1"),
-    (0x2c1, "BTN_TRIGGER_HAPPY2"),
-    (0x2c2, "BTN_TRIGGER_HAPPY3"),
-    (0x2c3, "BTN_TRIGGER_HAPPY4"),
-    (0x2c4, "BTN_TRIGGER_HAPPY5"),
-    (0x2c5, "BTN_TRIGGER_HAPPY6"),
-    (0x2c6, "BTN_TRIGGER_HAPPY7"),
-    (0x2c7, "BTN_TRIGGER_HAPPY8"),
-    (0x2c8, "BTN_TRIGGER_HAPPY9"),
-    (0x2c9, "BTN_TRIGGER_HAPPY10"),
-    (0x2ca, "BTN_TRIGGER_HAPPY11"),
-    (0x2cb, "BTN_TRIGGER_HAPPY12"),
-    (0x2cc, "BTN_TRIGGER_HAPPY13"),
-    (0x2cd, "BTN_TRIGGER_HAPPY14"),
-    (0x2ce, "BTN_TRIGGER_HAPPY15"),
-    (0x2cf, "BTN_TRIGGER_HAPPY16"),
-    (0x2d0, "BTN_TRIGGER_HAPPY17"),
-    (0x2d1, "BTN_TRIGGER_HAPPY18"),
-    (0x2d2, "BTN_TRIGGER_HAPPY19"),
-    (0x2d3, "BTN_TRIGGER_HAPPY20"),
-    (0x2d4, "BTN_TRIGGER_HAPPY21"),
-    (0x2d5, "BTN_TRIGGER_HAPPY22"),
-    (0x2d6, "BTN_TRIGGER_HAPPY23"),
-    (0x2d7, "BTN_TRIGGER_HAPPY24"),
-    (0x2d8, "BTN_TRIGGER_HAPPY25"),
-    (0x2d9, "BTN_TRIGGER_HAPPY26"),
-    (0x2da, "BTN_TRIGGER_HAPPY27"),
-    (0x2db, "BTN_TRIGGER_HAPPY28"),
-    (0x2dc, "BTN_TRIGGER_HAPPY29"),
-    (0x2dd, "BTN_TRIGGER_HAPPY30"),
-    (0x2de, "BTN_TRIGGER_HAPPY31"),
-    (0x2df, "BTN_TRIGGER_HAPPY32"),
-    (0x2e0, "BTN_TRIGGER_HAPPY33"),
-    (0x2e1, "BTN_TRIGGER_HAPPY34"),
-    (0x2e2, "BTN_TRIGGER_HAPPY35"),
-    (0x2e3, "BTN_TRIGGER_HAPPY36"),
-    (0x2e4, "BTN_TRIGGER_HAPPY37"),
-    (0x2e5, "BTN_TRIGGER_HAPPY38"),
-    (0x2e6, "BTN_TRIGGER_HAPPY39"),
-    (0x2e7, "BTN_TRIGGER_HAPPY40"),
-    (0x2ff, "KEY_MAX"),
-    (0x2ff+1, "KEY_CNT"))
+    (0x2C0, "BTN_TRIGGER_HAPPY"),
+    (0x2C0, "BTN_TRIGGER_HAPPY1"),
+    (0x2C1, "BTN_TRIGGER_HAPPY2"),
+    (0x2C2, "BTN_TRIGGER_HAPPY3"),
+    (0x2C3, "BTN_TRIGGER_HAPPY4"),
+    (0x2C4, "BTN_TRIGGER_HAPPY5"),
+    (0x2C5, "BTN_TRIGGER_HAPPY6"),
+    (0x2C6, "BTN_TRIGGER_HAPPY7"),
+    (0x2C7, "BTN_TRIGGER_HAPPY8"),
+    (0x2C8, "BTN_TRIGGER_HAPPY9"),
+    (0x2C9, "BTN_TRIGGER_HAPPY10"),
+    (0x2CA, "BTN_TRIGGER_HAPPY11"),
+    (0x2CB, "BTN_TRIGGER_HAPPY12"),
+    (0x2CC, "BTN_TRIGGER_HAPPY13"),
+    (0x2CD, "BTN_TRIGGER_HAPPY14"),
+    (0x2CE, "BTN_TRIGGER_HAPPY15"),
+    (0x2CF, "BTN_TRIGGER_HAPPY16"),
+    (0x2D0, "BTN_TRIGGER_HAPPY17"),
+    (0x2D1, "BTN_TRIGGER_HAPPY18"),
+    (0x2D2, "BTN_TRIGGER_HAPPY19"),
+    (0x2D3, "BTN_TRIGGER_HAPPY20"),
+    (0x2D4, "BTN_TRIGGER_HAPPY21"),
+    (0x2D5, "BTN_TRIGGER_HAPPY22"),
+    (0x2D6, "BTN_TRIGGER_HAPPY23"),
+    (0x2D7, "BTN_TRIGGER_HAPPY24"),
+    (0x2D8, "BTN_TRIGGER_HAPPY25"),
+    (0x2D9, "BTN_TRIGGER_HAPPY26"),
+    (0x2DA, "BTN_TRIGGER_HAPPY27"),
+    (0x2DB, "BTN_TRIGGER_HAPPY28"),
+    (0x2DC, "BTN_TRIGGER_HAPPY29"),
+    (0x2DD, "BTN_TRIGGER_HAPPY30"),
+    (0x2DE, "BTN_TRIGGER_HAPPY31"),
+    (0x2DF, "BTN_TRIGGER_HAPPY32"),
+    (0x2E0, "BTN_TRIGGER_HAPPY33"),
+    (0x2E1, "BTN_TRIGGER_HAPPY34"),
+    (0x2E2, "BTN_TRIGGER_HAPPY35"),
+    (0x2E3, "BTN_TRIGGER_HAPPY36"),
+    (0x2E4, "BTN_TRIGGER_HAPPY37"),
+    (0x2E5, "BTN_TRIGGER_HAPPY38"),
+    (0x2E6, "BTN_TRIGGER_HAPPY39"),
+    (0x2E7, "BTN_TRIGGER_HAPPY40"),
+    (0x2FF, "KEY_MAX"),
+    (0x2FF + 1, "KEY_CNT"),
+)
 
 RELATIVE_AXES = (
     (0x00, "REL_X"),
@@ -641,8 +651,9 @@ RELATIVE_AXES = (
     (0x07, "REL_DIAL"),
     (0x08, "REL_WHEEL"),
     (0x09, "REL_MISC"),
-    (0x0f, "REL_MAX"),
-    (0x0f+1, "REL_CNT"))
+    (0x0F, "REL_MAX"),
+    (0x0F + 1, "REL_CNT"),
+)
 
 ABSOLUTE_AXES = (
     (0x00, "ABS_X"),
@@ -655,7 +666,7 @@ ABSOLUTE_AXES = (
     (0x07, "ABS_RUDDER"),
     (0x08, "ABS_WHEEL"),
     (0x09, "ABS_GAS"),
-    (0x0a, "ABS_BRAKE"),
+    (0x0A, "ABS_BRAKE"),
     (0x10, "ABS_HAT0X"),
     (0x11, "ABS_HAT0Y"),
     (0x12, "ABS_HAT1X"),
@@ -666,12 +677,12 @@ ABSOLUTE_AXES = (
     (0x17, "ABS_HAT3Y"),
     (0x18, "ABS_PRESSURE"),
     (0x19, "ABS_DISTANCE"),
-    (0x1a, "ABS_TILT_X"),
-    (0x1b, "ABS_TILT_Y"),
-    (0x1c, "ABS_TOOL_WIDTH"),
+    (0x1A, "ABS_TILT_X"),
+    (0x1B, "ABS_TILT_Y"),
+    (0x1C, "ABS_TOOL_WIDTH"),
     (0x20, "ABS_VOLUME"),
     (0x28, "ABS_MISC"),
-    (0x2f, "ABS_MT_SLOT"),  # MT slot being modified
+    (0x2F, "ABS_MT_SLOT"),  # MT slot being modified
     (0x30, "ABS_MT_TOUCH_MAJOR"),  # Major axis of touching ellipse
     (0x31, "ABS_MT_TOUCH_MINOR"),  # Minor axis (omit if circular)
     (0x32, "ABS_MT_WIDTH_MAJOR"),  # Major axis of approaching ellipse
@@ -682,12 +693,13 @@ ABSOLUTE_AXES = (
     (0x37, "ABS_MT_TOOL_TYPE"),  # Type of touching device
     (0x38, "ABS_MT_BLOB_ID"),  # Group a set of packets as a blob
     (0x39, "ABS_MT_TRACKING_ID"),  # Unique ID of initiated contact
-    (0x3a, "ABS_MT_PRESSURE"),  # Pressure on contact area
-    (0x3b, "ABS_MT_DISTANCE"),  # Contact hover distance
-    (0x3c, "ABS_MT_TOOL_X"),  # Center X tool position
-    (0x3d, "ABS_MT_TOOL_Y"),  # Center Y tool position
-    (0x3f, "ABS_MAX"),
-    (0x3f+1, "ABS_CNT"))
+    (0x3A, "ABS_MT_PRESSURE"),  # Pressure on contact area
+    (0x3B, "ABS_MT_DISTANCE"),  # Contact hover distance
+    (0x3C, "ABS_MT_TOOL_X"),  # Center X tool position
+    (0x3D, "ABS_MT_TOOL_Y"),  # Center Y tool position
+    (0x3F, "ABS_MAX"),
+    (0x3F + 1, "ABS_CNT"),
+)
 
 SWITCH_EVENTS = (
     (0x00, "SW_LID"),  # set = lid shut
@@ -700,13 +712,14 @@ SWITCH_EVENTS = (
     (0x07, "SW_JACK_PHYSICAL_INSERT"),  # set = mechanical switch set
     (0x08, "SW_VIDEOOUT_INSERT"),  # set = inserted
     (0x09, "SW_CAMERA_LENS_COVER"),  # set = lens covered
-    (0x0a, "SW_KEYPAD_SLIDE"),  # set = keypad slide out
-    (0x0b, "SW_FRONT_PROXIMITY"),  # set = front proximity sensor active
-    (0x0c, "SW_ROTATE_LOCK"),  # set = rotate locked/disabled
-    (0x0d, "SW_LINEIN_INSERT"),  # set = inserted
-    (0x0e, "SW_MUTE_DEVICE"),  # set = device disabled
-    (0x0f, "SW_MAX"),
-    (0x0f+1, "SW_CNT"))
+    (0x0A, "SW_KEYPAD_SLIDE"),  # set = keypad slide out
+    (0x0B, "SW_FRONT_PROXIMITY"),  # set = front proximity sensor active
+    (0x0C, "SW_ROTATE_LOCK"),  # set = rotate locked/disabled
+    (0x0D, "SW_LINEIN_INSERT"),  # set = inserted
+    (0x0E, "SW_MUTE_DEVICE"),  # set = device disabled
+    (0x0F, "SW_MAX"),
+    (0x0F + 1, "SW_CNT"),
+)
 
 MISC_EVENTS = (
     (0x00, "MSC_SERIAL"),
@@ -716,7 +729,8 @@ MISC_EVENTS = (
     (0x04, "MSC_SCAN"),
     (0x05, "MSC_TIMESTAMP"),
     (0x07, "MSC_MAX"),
-    (0x07+1, "MSC_CNT"))
+    (0x07 + 1, "MSC_CNT"),
+)
 
 LEDS = (
     (0x00, "LED_NUML"),
@@ -729,38 +743,41 @@ LEDS = (
     (0x07, "LED_MUTE"),
     (0x08, "LED_MISC"),
     (0x09, "LED_MAIL"),
-    (0x0a, "LED_CHARGING"),
-    (0x0f, "LED_MAX"),
-    (0x0f+1, "LED_CNT"))
+    (0x0A, "LED_CHARGING"),
+    (0x0F, "LED_MAX"),
+    (0x0F + 1, "LED_CNT"),
+)
 
 LED_TYPE_CODES = (
-    ('numlock', 0x00),
-    ('capslock', 0x01),
-    ('scrolllock', 0x02),
-    ('compose', 0x03),
-    ('kana', 0x04),
-    ('sleep', 0x05),
-    ('suspend', 0x06),
-    ('mute', 0x07),
-    ('misc', 0x08),
-    ('mail', 0x09),
-    ('charging', 0x0a),
-    ('max', 0x0f),
-    ('cnt', 0x0f+1)
+    ("numlock", 0x00),
+    ("capslock", 0x01),
+    ("scrolllock", 0x02),
+    ("compose", 0x03),
+    ("kana", 0x04),
+    ("sleep", 0x05),
+    ("suspend", 0x06),
+    ("mute", 0x07),
+    ("misc", 0x08),
+    ("mail", 0x09),
+    ("charging", 0x0A),
+    ("max", 0x0F),
+    ("cnt", 0x0F + 1),
 )
 
 AUTOREPEAT_VALUES = (
     (0x00, "REP_DELAY"),
     (0x01, "REP_PERIOD"),
     (0x01, "REP_MAX"),
-    (0x01+1, "REP_CNT"))
+    (0x01 + 1, "REP_CNT"),
+)
 
 SOUNDS = (
     (0x00, "SND_CLICK"),
     (0x01, "SND_BELL"),
     (0x02, "SND_TONE"),
     (0x07, "SND_MAX"),
-    (0x07+1, "SND_CNT"))
+    (0x07 + 1, "SND_CNT"),
+)
 
 WIN_KEYBOARD_CODES = {
     0x0100: 1,
@@ -770,14 +787,14 @@ WIN_KEYBOARD_CODES = {
 }
 
 WIN_MOUSE_CODES = {
-    0x0201: (0x110, 1, 589825),   # WM_LBUTTONDOWN --> BTN_LEFT
-    0x0202: (0x110, 0, 589825),   # WM_LBUTTONUP   --> BTN_LEFT
-    0x0204: (0x111, 1, 589826),   # WM_RBUTTONDOWN --> BTN_RIGHT
-    0x0205: (0x111, 0, 589826),   # WM_RBUTTONUP   --> BTN_RIGHT
-    0x0207: (0x112, 1, 589827),   # WM_MBUTTONDOWN --> BTN_MIDDLE
-    0x0208: (0x112, 0, 589827),   # WM_MBUTTONU    --> BTN_MIDDLE
-    0x020B: (0x113, 1, 589828),   # WM_XBUTTONDOWN --> BTN_SIDE
-    0x020C: (0x113, 0, 589828),   # WM_XBUTTONUP   --> BTN_SIDE
+    0x0201: (0x110, 1, 589825),  # WM_LBUTTONDOWN --> BTN_LEFT
+    0x0202: (0x110, 0, 589825),  # WM_LBUTTONUP   --> BTN_LEFT
+    0x0204: (0x111, 1, 589826),  # WM_RBUTTONDOWN --> BTN_RIGHT
+    0x0205: (0x111, 0, 589826),  # WM_RBUTTONUP   --> BTN_RIGHT
+    0x0207: (0x112, 1, 589827),  # WM_MBUTTONDOWN --> BTN_MIDDLE
+    0x0208: (0x112, 0, 589827),  # WM_MBUTTONU    --> BTN_MIDDLE
+    0x020B: (0x113, 1, 589828),  # WM_XBUTTONDOWN --> BTN_SIDE
+    0x020C: (0x113, 0, 589828),  # WM_XBUTTONUP   --> BTN_SIDE
     0x020B2: (0x114, 1, 589829),  # WM_XBUTTONDOWN --> BTN_EXTRA
     0x020C2: (0x114, 0, 589829),  # WM_XBUTTONUP   --> BTN_EXTRA
 }
@@ -810,7 +827,7 @@ WINCODES = (
     (0x14, 58),  # CAPS LOCK key
     (0x15, 90),  # IME Kana mode
     (0x15, 91),  # IME Hanguel mode (maintained for compatibility; use
-                 # VK_HANGUL)
+    # VK_HANGUL)
     (0x15, 91),  # IME Hangul mode
     (0x16, 0),  # Undefined
     (0x17, 92),  # IME Junja mode - These all need to be fixed
@@ -937,7 +954,7 @@ WINCODES = (
     (0xA8, 173),  # Browser Refresh key
     (0xA9, 128),  # Browser Stop key
     (0xAA, 217),  # Browser Search key
-    (0xAB, 0x16c),  # Browser Favorites key
+    (0xAB, 0x16C),  # Browser Favorites key
     (0xAC, 150),  # Browser Start and Home key
     (0xAD, 113),  # Volume Mute key
     (0xAE, 114),  # Volume Down key
@@ -968,15 +985,15 @@ WINCODES = (
     (0xE0, 0),  # Reserved
     (0xE1, 0),  # OEM Specific
     (0xE2, 43),  # Either the angle bracket key or the backslash key
-                 # on the RT 102-key keyboard (0xE3-E4, 0), # OEM
-                 # specific
+    # on the RT 102-key keyboard (0xE3-E4, 0), # OEM
+    # specific
     (0xE5, 0),  # IME PROCESS key
     (0xE6, 0),  # OEM specific
     (0xE7, 0),  # Used to pass Unicode characters as if they were
-                # keystrokes. The VK_PACKET key is the low word of a
-                # 32-bit Virtual Key value used for non-keyboard input
-                # methods. For more information, see Remark in
-                # KEYBDINPUT, SendInput, WM_KEYDOWN, and WM_KEYUP
+    # keystrokes. The VK_PACKET key is the low word of a
+    # 32-bit Virtual Key value used for non-keyboard input
+    # methods. For more information, see Remark in
+    # KEYBDINPUT, SendInput, WM_KEYDOWN, and WM_KEYUP
     (0xE8, 0),  # Unassigned
     #  (0xE9-F5, 0),  # OEM specific
     (0xF6, 0),  # Attn key
@@ -986,9 +1003,9 @@ WINCODES = (
     (0xFA, 207),  # Play key
     (0xFB, 0x174),  # Zoom key
     (0xFC, 0),  # Reserved
-    (0xFD, 0x19b),  # PA1 key
-    (0xFE, 0x163),   # Clear key
-    (0xFF, 185)
+    (0xFD, 0x19B),  # PA1 key
+    (0xFE, 0x163),  # Clear key
+    (0xFF, 185),
 )
 
 MAC_EVENT_CODES = (
@@ -1000,42 +1017,42 @@ MAC_EVENT_CODES = (
     (3, ("Key", 0x111, 1, 589826)),
     # NSRightMouseUp Quartz.kCGEventRightMouseUp
     (4, ("Key", 0x111, 0, 589826)),
-    (5, (None, 0, 0, 0)),    # NSMouseMoved Quartz.kCGEventMouseMoved
+    (5, (None, 0, 0, 0)),  # NSMouseMoved Quartz.kCGEventMouseMoved
     (6, (None, 0, 0, 0)),  # NSLeftMouseDragged Quartz.kCGEventLeftMouseDragged
     # NSRightMouseDragged Quartz.kCGEventRightMouseDragged
     (7, (None, 0, 0, 0)),
-    (8, (None, 0, 0, 0)),    # NSMouseEntered
-    (9, (None, 0, 0, 0)),    # NSMouseExited
-    (10, (None, 0, 0, 0)),   # NSKeyDown
-    (11, (None, 0, 0, 0)),   # NSKeyUp
-    (12, (None, 0, 0, 0)),   # NSFlagsChanged
-    (13, (None, 0, 0, 0)),   # NSAppKitDefined
-    (14, (None, 0, 0, 0)),   # NSSystemDefined
-    (15, (None, 0, 0, 0)),   # NSApplicationDefined
-    (16, (None, 0, 0, 0)),   # NSPeriodic
-    (17, (None, 0, 0, 0)),   # NSCursorUpdate
-    (22, (None, 0, 0, 0)),   # NSScrollWheel Quartz.kCGEventScrollWheel
-    (23, (None, 0, 0, 0)),   # NSTabletPoint Quartz.kCGEventTabletPointer
-    (24, (None, 0, 0, 0)),   # NSTabletProximity Quartz.kCGEventTabletProximity
-    (25, (None, 0, 0, 0)),   # NSOtherMouseDown Quartz.kCGEventOtherMouseDown
-    (25.2, ("Key", 0x112, 1, 589827)),   # BTN_MIDDLE
-    (25.3, ("Key", 0x113, 1, 589828)),   # BTN_SIDE
-    (25.4, ("Key", 0x114, 1, 589829)),   # BTN_EXTRA
-    (26, (None, 0, 0, 0)),   # NSOtherMouseUp Quartz.kCGEventOtherMouseUp
-    (26.2, ("Key", 0x112, 0, 589827)),   # BTN_MIDDLE
-    (26.3, ("Key", 0x113, 0, 589828)),   # BTN_SIDE
-    (26.4, ("Key", 0x114, 0, 589829)),   # BTN_EXTRA
-    (27, (None, 0, 0, 0)),   # NSOtherMouseDragged
-    (29, (None, 0, 0, 0)),   # NSEventTypeGesture
-    (30, (None, 0, 0, 0)),   # NSEventTypeMagnify
-    (31, (None, 0, 0, 0)),   # NSEventTypeSwipe
-    (18, (None, 0, 0, 0)),   # NSEventTypeRotate
-    (19, (None, 0, 0, 0)),   # NSEventTypeBeginGesture
-    (20, (None, 0, 0, 0)),   # NSEventTypeEndGesture
-    (27, (None, 0, 0, 0)),   # Quartz.kCGEventOtherMouseDragged
-    (32, (None, 0, 0, 0)),   # NSEventTypeSmartMagnify
-    (33, (None, 0, 0, 0)),   # NSEventTypeQuickLook
-    (34, (None, 0, 0, 0)),   # NSEventTypePressure
+    (8, (None, 0, 0, 0)),  # NSMouseEntered
+    (9, (None, 0, 0, 0)),  # NSMouseExited
+    (10, (None, 0, 0, 0)),  # NSKeyDown
+    (11, (None, 0, 0, 0)),  # NSKeyUp
+    (12, (None, 0, 0, 0)),  # NSFlagsChanged
+    (13, (None, 0, 0, 0)),  # NSAppKitDefined
+    (14, (None, 0, 0, 0)),  # NSSystemDefined
+    (15, (None, 0, 0, 0)),  # NSApplicationDefined
+    (16, (None, 0, 0, 0)),  # NSPeriodic
+    (17, (None, 0, 0, 0)),  # NSCursorUpdate
+    (22, (None, 0, 0, 0)),  # NSScrollWheel Quartz.kCGEventScrollWheel
+    (23, (None, 0, 0, 0)),  # NSTabletPoint Quartz.kCGEventTabletPointer
+    (24, (None, 0, 0, 0)),  # NSTabletProximity Quartz.kCGEventTabletProximity
+    (25, (None, 0, 0, 0)),  # NSOtherMouseDown Quartz.kCGEventOtherMouseDown
+    (25.2, ("Key", 0x112, 1, 589827)),  # BTN_MIDDLE
+    (25.3, ("Key", 0x113, 1, 589828)),  # BTN_SIDE
+    (25.4, ("Key", 0x114, 1, 589829)),  # BTN_EXTRA
+    (26, (None, 0, 0, 0)),  # NSOtherMouseUp Quartz.kCGEventOtherMouseUp
+    (26.2, ("Key", 0x112, 0, 589827)),  # BTN_MIDDLE
+    (26.3, ("Key", 0x113, 0, 589828)),  # BTN_SIDE
+    (26.4, ("Key", 0x114, 0, 589829)),  # BTN_EXTRA
+    (27, (None, 0, 0, 0)),  # NSOtherMouseDragged
+    (29, (None, 0, 0, 0)),  # NSEventTypeGesture
+    (30, (None, 0, 0, 0)),  # NSEventTypeMagnify
+    (31, (None, 0, 0, 0)),  # NSEventTypeSwipe
+    (18, (None, 0, 0, 0)),  # NSEventTypeRotate
+    (19, (None, 0, 0, 0)),  # NSEventTypeBeginGesture
+    (20, (None, 0, 0, 0)),  # NSEventTypeEndGesture
+    (27, (None, 0, 0, 0)),  # Quartz.kCGEventOtherMouseDragged
+    (32, (None, 0, 0, 0)),  # NSEventTypeSmartMagnify
+    (33, (None, 0, 0, 0)),  # NSEventTypeQuickLook
+    (34, (None, 0, 0, 0)),  # NSEventTypePressure
 )
 
 MAC_KEYS = (
@@ -1117,7 +1134,7 @@ MAC_KEYS = (
     (0x3D, 100),  # kVK_RightOption
     (0x3E, 126),  # kVK_RightControl
     (0x36, 126),  # Right Meta
-    (0x3F, 0x1d0),  # kVK_Function
+    (0x3F, 0x1D0),  # kVK_Function
     (0x40, 187),  # kVK_F17
     (0x48, 115),  # kVK_VolumeUp
     (0x49, 114),  # kVK_VolumeDown
@@ -1156,7 +1173,7 @@ MAC_KEYS = (
     (0x5E, 92),  # kVK_JIS_Underscore
     (0x5F, 95),  # kVK_JIS_KeypadComma
     (0x66, 94),  # kVK_JIS_Eisu
-    (0x68, 90)   # kVK_JIS_Kana
+    (0x68, 90),  # kVK_JIS_Kana
 )
 
 
@@ -1176,26 +1193,27 @@ CURRENT = ()
 
 
 EVENT_MAP = (
-    ('types', EVENT_TYPES),
-    ('type_codes', ((value, key) for key, value in EVENT_TYPES)),
-    ('wincodes', WINCODES),
-    ('specials', SPECIAL_DEVICES),
-    ('xpad', XINPUT_MAPPING),
-    ('Sync', SYNCHRONIZATION_EVENTS),
-    ('Key', KEYS_AND_BUTTONS),
-    ('Relative', RELATIVE_AXES),
-    ('Absolute', ABSOLUTE_AXES),
-    ('Misc', MISC_EVENTS),
-    ('Switch', SWITCH_EVENTS),
-    ('LED', LEDS),
-    ('LED_type_codes', LED_TYPE_CODES),
-    ('Sound', SOUNDS),
-    ('Repeat', AUTOREPEAT_VALUES),
-    ('ForceFeedback', FORCE_FEEDBACK),
-    ('Power', POWER),
-    ('ForceFeedbackStatus', FORCE_FEEDBACK_STATUS),
-    ('Max', MAX),
-    ('Current', CURRENT))
+    ("types", EVENT_TYPES),
+    ("type_codes", ((value, key) for key, value in EVENT_TYPES)),
+    ("wincodes", WINCODES),
+    ("specials", SPECIAL_DEVICES),
+    ("xpad", XINPUT_MAPPING),
+    ("Sync", SYNCHRONIZATION_EVENTS),
+    ("Key", KEYS_AND_BUTTONS),
+    ("Relative", RELATIVE_AXES),
+    ("Absolute", ABSOLUTE_AXES),
+    ("Misc", MISC_EVENTS),
+    ("Switch", SWITCH_EVENTS),
+    ("LED", LEDS),
+    ("LED_type_codes", LED_TYPE_CODES),
+    ("Sound", SOUNDS),
+    ("Repeat", AUTOREPEAT_VALUES),
+    ("ForceFeedback", FORCE_FEEDBACK),
+    ("Power", POWER),
+    ("ForceFeedbackStatus", FORCE_FEEDBACK_STATUS),
+    ("Max", MAX),
+    ("Current", CURRENT),
+)
 
 # Evdev style paths for the Mac
 

@@ -1,8 +1,7 @@
 """Simple example showing how to get keyboard events."""
 
 from __future__ import print_function
-
-from inputs import get_key
+from inputs.devices import get_key 
 
 
 def main():

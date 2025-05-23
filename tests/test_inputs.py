@@ -4,6 +4,8 @@ from unittest import TestCase
 
 import inputs
 from inputs.devices import get_key, get_mouse, get_gamepad
+from inputs.devices.common import InputEvent
+from inputs.utils import convert_timeval
 from tests.constants import mock
 
 RAW = ""
@@ -16,7 +18,7 @@ class InputEventTestCase(TestCase):
     """Test the InputEvent class."""
     def test_input_event_init(self):
         """Test that the input event sets the required properties."""
-        event = inputs.InputEvent(
+        event = InputEvent(
             "Some Device",
             {'ev_type': 'Key',
              'state': 0,
@@ -105,9 +107,9 @@ class ConvertTimevalTestCase(TestCase):
     # pylint: disable=arguments-differ
     def test_convert_timeval(self):
         """Gives particular seconds and microseconds."""
-        self.assertEqual(inputs.convert_timeval(2000.0002), (2000, 199))
-        self.assertEqual(inputs.convert_timeval(100.000002), (100, 1))
-        self.assertEqual(inputs.convert_timeval(199.2), (199, 199999))
-        self.assertEqual(inputs.convert_timeval(0), (0, 0))
-        self.assertEqual(inputs.convert_timeval(100), (100, 0))
-        self.assertEqual(inputs.convert_timeval(0.001), (0, 1000))
+        self.assertEqual(convert_timeval(2000.0002), (2000, 199))
+        self.assertEqual(convert_timeval(100.000002), (100, 1))
+        self.assertEqual(convert_timeval(199.2), (199, 199999))
+        self.assertEqual(convert_timeval(0), (0, 0))
+        self.assertEqual(convert_timeval(100), (100, 0))
+        self.assertEqual(convert_timeval(0.001), (0, 1000))

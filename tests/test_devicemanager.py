@@ -4,6 +4,7 @@ from unittest import TestCase
 
 import inputs
 
+from inputs.devices.common import DeviceManager
 from tests.constants import mock, PurePath, PYTHON
 
 RAW = ""
@@ -20,11 +21,11 @@ OTHER_PATH = "/dev/input/by-path/the-machine-that-goes-ping-other"
 class DeviceManagePostrInitTestCase(TestCase):
     """Test the device manager class' post-init method."""
 
-    @mock.patch.object(inputs.DeviceManager, '_find_devices')
-    @mock.patch.object(inputs.DeviceManager, '_find_devices_mac')
-    @mock.patch.object(inputs.DeviceManager, '_find_devices_win')
-    @mock.patch.object(inputs.DeviceManager, '_find_leds')
-    @mock.patch.object(inputs.DeviceManager, '_update_all_devices')
+    @mock.patch.object(DeviceManager, '_find_devices')
+    @mock.patch.object(DeviceManager, '_find_devices_mac')
+    @mock.patch.object(DeviceManager, '_find_devices_win')
+    @mock.patch.object(DeviceManager, '_find_leds')
+    @mock.patch.object(DeviceManager, '_update_all_devices')
     def test_post_init_linux(
             self,
             mock_update_all_devices,
@@ -37,17 +38,17 @@ class DeviceManagePostrInitTestCase(TestCase):
         inputs.WIN = False
         inputs.MAC = False
         # pylint: disable=unused-variable
-        device_manger = inputs.DeviceManager()
+        device_manger = DeviceManager()
         mock_update_all_devices.assert_called()
         mock_find_devices.assert_called()
         mock_find_devices_mac.assert_not_called()
         mock_find_devices_win.assert_not_called()
         mock_find_leds.assert_called()
 
-    @mock.patch.object(inputs.DeviceManager, '_find_devices')
-    @mock.patch.object(inputs.DeviceManager, '_find_devices_mac')
-    @mock.patch.object(inputs.DeviceManager, '_find_devices_win')
-    @mock.patch.object(inputs.DeviceManager, '_update_all_devices')
+    @mock.patch.object(DeviceManager, '_find_devices')
+    @mock.patch.object(DeviceManager, '_find_devices_mac')
+    @mock.patch.object(DeviceManager, '_find_devices_win')
+    @mock.patch.object(DeviceManager, '_update_all_devices')
     def test_post_init_mac(self,
                            mock_update_all_devices,
                            mock_find_devices_win,
@@ -57,16 +58,16 @@ class DeviceManagePostrInitTestCase(TestCase):
         inputs.NIX = False
         inputs.WIN = False
         inputs.MAC = True
-        inputs.DeviceManager()
+        DeviceManager()
         mock_update_all_devices.assert_called()
         mock_find_devices_mac.assert_called()
         mock_find_devices.assert_not_called()
         mock_find_devices_win.assert_not_called()
 
-    @mock.patch.object(inputs.DeviceManager, '_find_devices')
-    @mock.patch.object(inputs.DeviceManager, '_find_devices_mac')
-    @mock.patch.object(inputs.DeviceManager, '_find_devices_win')
-    @mock.patch.object(inputs.DeviceManager, '_update_all_devices')
+    @mock.patch.object(DeviceManager, '_find_devices')
+    @mock.patch.object(DeviceManager, '_find_devices_mac')
+    @mock.patch.object(DeviceManager, '_find_devices_win')
+    @mock.patch.object(DeviceManager, '_update_all_devices')
     def test_post_init_win(self,
                            mock_update_all_devices,
                            mock_find_devices_win,
@@ -76,7 +77,7 @@ class DeviceManagePostrInitTestCase(TestCase):
         inputs.WIN = True
         inputs.MAC = False
         inputs.NIX = False
-        inputs.DeviceManager()
+        DeviceManager()
         mock_update_all_devices.assert_called()
         mock_find_devices_win.assert_called()
         mock_find_devices.assert_not_called()
@@ -99,9 +100,9 @@ class DeviceManagerTestCase(TestCase):
     # There can never be too many tests.
     # pylint: disable=too-many-public-methods
 
-    @mock.patch.object(inputs.DeviceManager, '_post_init')
+    @mock.patch.object(DeviceManager, '_post_init')
     def setUp(self, mock_method):
-        self.device_manger = inputs.DeviceManager()
+        self.device_manger = DeviceManager()
         self.mock_method = mock_method
 
     def test_init(self):
@@ -300,8 +301,8 @@ class DeviceManagerTestCase(TestCase):
         with self.assertRaises(inputs.UnknownEventCode):
             self.device_manger.get_event_string('Key', 0x999)
 
-    @mock.patch.object(inputs.DeviceManager, '_find_special')
-    @mock.patch.object(inputs.DeviceManager, '_find_by')
+    @mock.patch.object(DeviceManager, '_find_special')
+    @mock.patch.object(DeviceManager, '_find_by')
     def test_find_devices(self, mock_find_by, mock_find_special):
         """It should find by path, id and specials."""
         self.device_manger._find_devices()
@@ -327,8 +328,8 @@ class DeviceManagerTestCase(TestCase):
         for device in (0, 1, 2, 3, 4):
             self.assertEqual(self.device_manger[device], device)
 
-    @mock.patch.object(inputs.DeviceManager, '_parse_device_path')
-    @mock.patch('inputs.open', mock.mock_open(read_data=MOCK_DEVICE))
+    @mock.patch.object(DeviceManager, '_parse_device_path')
+    @mock.patch('inputs.devices.led.open', mock.mock_open(read_data=MOCK_DEVICE))
     @mock.patch('glob.glob')
     def test_find_special(self, mock_glob, mock_parse_device_path):
         """Find a special device."""
@@ -356,9 +357,9 @@ class DeviceManagerTestCase(TestCase):
 
             self.assertEqual(device_path, target_path)
 
-    @mock.patch.object(inputs.DeviceManager, '_parse_device_path')
-    @mock.patch.object(inputs.DeviceManager, '_get_char_names')
-    @mock.patch('inputs.open', mock.mock_open(read_data=MOCK_DEVICE))
+    @mock.patch.object(DeviceManager, '_parse_device_path')
+    @mock.patch.object(DeviceManager, '_get_char_names')
+    @mock.patch('inputs.devices.led.open', mock.mock_open(read_data=MOCK_DEVICE))
     @mock.patch('glob.glob')
     def test_find_special_repeated(self,
                                    mock_glob,
@@ -374,7 +375,7 @@ class DeviceManagerTestCase(TestCase):
         mock_parse_device_path.assert_not_called()
 
     @mock.patch('glob.glob')
-    @mock.patch.object(inputs.DeviceManager, '_parse_device_path')
+    @mock.patch.object(DeviceManager, '_parse_device_path')
     def test_find_by(self,
                      mock_parse_device_path,
                      mock_glob):
@@ -395,9 +396,9 @@ class DeviceManagerPlatformTestCase(TestCase):
     # There can never be too many tests.
     # pylint: disable=too-many-public-methods
 
-    @mock.patch.object(inputs.DeviceManager, '_post_init')
+    @mock.patch.object(DeviceManager, '_post_init')
     def setUp(self, mock_method):
-        self.device_manager = inputs.DeviceManager()
+        self.device_manager = DeviceManager()
         self.mock_method = mock_method
 
     @mock.patch('inputs.Mouse')
@@ -445,9 +446,9 @@ class DeviceManagerPlatformTestCase(TestCase):
 
         self.assertIsNone(self.device_manager.xinput)
 
-    @mock.patch.object(inputs.DeviceManager, '_find_xinput')
-    @mock.patch.object(inputs.DeviceManager, '_detect_gamepads')
-    @mock.patch.object(inputs.DeviceManager, '_count_devices')
+    @mock.patch.object(DeviceManager, '_find_xinput')
+    @mock.patch.object(DeviceManager, '_detect_gamepads')
+    @mock.patch.object(DeviceManager, '_count_devices')
     @mock.patch('inputs.Mouse')
     @mock.patch('inputs.Keyboard')
     def test_find_devices_win(self,

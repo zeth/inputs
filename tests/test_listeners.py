@@ -4,6 +4,7 @@ from unittest import TestCase
 
 import inputs
 
+from inputs.platforms.mac.mouse import QuartzMouseBaseListener
 from tests.constants import mock, PYTHON
 if PYTHON == 3:
     mock._magics.add('__round__')
@@ -241,7 +242,7 @@ class QuartzMouseBaseListenerTestCase(TestCase):
     def test_init(self):
         """The created object has properties."""
         pipe = mock.MagicMock()
-        listener = inputs.QuartzMouseBaseListener(pipe)
+        listener = QuartzMouseBaseListener(pipe)
         self.assertTrue(listener.active)
         self.assertEqual(
             listener.codes[1],
@@ -250,7 +251,7 @@ class QuartzMouseBaseListenerTestCase(TestCase):
     def test_abstract_methods(self):
         """Test that they raise an exception."""
         pipe = mock.MagicMock()
-        listener = inputs.QuartzMouseBaseListener(pipe)
+        listener = QuartzMouseBaseListener(pipe)
 
         event = mock.MagicMock()
         with self.assertRaises(NotImplementedError):
@@ -278,11 +279,11 @@ class QuartzMouseBaseListenerTestCase(TestCase):
         event.assert_not_called()
 
     @mock.patch.object(
-        inputs.QuartzMouseBaseListener,
+        QuartzMouseBaseListener,
         '_get_mouse_button_number',
         return_value=1)
     @mock.patch.object(
-        inputs.QuartzMouseBaseListener,
+        QuartzMouseBaseListener,
         '_get_click_state',
         return_value=1)
     def test_handle_button(self,
@@ -290,7 +291,7 @@ class QuartzMouseBaseListenerTestCase(TestCase):
                            mock_get_click_state):
         """Convert quartz events to evdev events."""
         pipe = mock.MagicMock()
-        listener = inputs.QuartzMouseBaseListener(pipe)
+        listener = QuartzMouseBaseListener(pipe)
 
         # We begin with no events
         self.assertEqual(listener.events, [])
@@ -317,11 +318,11 @@ class QuartzMouseBaseListenerTestCase(TestCase):
         self.assertEqual(third_event[2:], (20, 2, 1))
 
     @mock.patch.object(
-        inputs.QuartzMouseBaseListener,
+        QuartzMouseBaseListener,
         '_get_mouse_button_number',
         return_value=2)
     @mock.patch.object(
-        inputs.QuartzMouseBaseListener,
+        QuartzMouseBaseListener,
         '_get_click_state',
         return_value=1)
     def test_handle_middle_button(self,
@@ -329,7 +330,7 @@ class QuartzMouseBaseListenerTestCase(TestCase):
                                   mock_get_click_state):
         """Convert quartz events to evdev events."""
         pipe = mock.MagicMock()
-        listener = inputs.QuartzMouseBaseListener(pipe)
+        listener = QuartzMouseBaseListener(pipe)
 
         # We begin with no events
         self.assertEqual(listener.events, [])
@@ -356,14 +357,14 @@ class QuartzMouseBaseListenerTestCase(TestCase):
         self.assertEqual(third_event[2:], (20, 2, 1))
 
     @mock.patch.object(
-        inputs.QuartzMouseBaseListener,
+        QuartzMouseBaseListener,
         '_get_scroll',
         return_value=(2, 2))
     def test_handle_scrollwheel(self,
                                 mock_get_scroll):
         """Scroll wheel produces events."""
         pipe = mock.MagicMock()
-        listener = inputs.QuartzMouseBaseListener(pipe)
+        listener = QuartzMouseBaseListener(pipe)
 
         # We begin with no evdev events
         self.assertEqual(listener.events, [])
@@ -391,13 +392,13 @@ class QuartzMouseBaseListenerTestCase(TestCase):
         self.assertEqual(second_event[2:], (2, 8, 2))
 
     @mock.patch.object(
-        inputs.QuartzMouseBaseListener,
+        QuartzMouseBaseListener,
         '_get_absolute',
         return_value=(3.1, 2.1))
     def test_handle_absolute(self, mock_get_absolute):
         """Absolute mouse movement produces events."""
         pipe = mock.MagicMock()
-        listener = inputs.QuartzMouseBaseListener(pipe)
+        listener = QuartzMouseBaseListener(pipe)
 
         # We begin with no evdev events
         self.assertEqual(listener.events, [])
@@ -425,13 +426,13 @@ class QuartzMouseBaseListenerTestCase(TestCase):
         self.assertEqual(second_event[2:], (3, 1, 2))
 
     @mock.patch.object(
-        inputs.QuartzMouseBaseListener,
+        QuartzMouseBaseListener,
         '_get_relative',
         return_value=(600, 400))
     def test_handle_relative(self, mock_get_relative):
         """Relative mouse movement produces events."""
         pipe = mock.MagicMock()
-        listener = inputs.QuartzMouseBaseListener(pipe)
+        listener = QuartzMouseBaseListener(pipe)
 
         # We begin with no evdev events
         self.assertEqual(listener.events, [])
@@ -459,13 +460,13 @@ class QuartzMouseBaseListenerTestCase(TestCase):
         self.assertEqual(second_event[2:], (2, 1, 400))
 
     @mock.patch.object(
-        inputs.QuartzMouseBaseListener,
+        QuartzMouseBaseListener,
         'handle_relative')
     @mock.patch.object(
-        inputs.QuartzMouseBaseListener,
+        QuartzMouseBaseListener,
         'handle_absolute')
     @mock.patch.object(
-        inputs.QuartzMouseBaseListener,
+        QuartzMouseBaseListener,
         'handle_button')
     def test_handle_input(self,
                           mock_handle_button,
@@ -473,7 +474,7 @@ class QuartzMouseBaseListenerTestCase(TestCase):
                           mock_handle_relative):
         """Input events from Quartz are handled with the correct method."""
         pipe = mock.MagicMock()
-        listener = inputs.QuartzMouseBaseListener(pipe)
+        listener = QuartzMouseBaseListener(pipe)
         event = mock.MagicMock()
         listener.handle_input(None, 1, event, None)
 
@@ -494,13 +495,13 @@ class QuartzMouseBaseListenerTestCase(TestCase):
     # Now we must handle the scroll wheel
 
     @mock.patch.object(
-        inputs.QuartzMouseBaseListener,
+        QuartzMouseBaseListener,
         'handle_relative')
     @mock.patch.object(
-        inputs.QuartzMouseBaseListener,
+        QuartzMouseBaseListener,
         'handle_absolute')
     @mock.patch.object(
-        inputs.QuartzMouseBaseListener,
+        QuartzMouseBaseListener,
         'handle_scrollwheel')
     def test_handle_input_scroll(
             self,
@@ -509,7 +510,7 @@ class QuartzMouseBaseListenerTestCase(TestCase):
             mock_handle_relative):
         """Input events from Quartz are handled with the correct method."""
         pipe = mock.MagicMock()
-        listener = inputs.QuartzMouseBaseListener(pipe)
+        listener = QuartzMouseBaseListener(pipe)
         event = mock.MagicMock()
         listener.handle_input(None, 22, event, None)
 
