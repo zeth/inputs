@@ -58,6 +58,8 @@ import ctypes
 
 from .constants import (EVENT_MAP, MAC_EVENT_CODES, EVENT_TYPES, MAC_KEYS, XINPUT_DLL_NAMES, XINPUT_ERROR_SUCCESS, XINPUT_ERROR_DEVICE_NOT_CONNECTED)
 from .platforms import (WIN, MAC, NIX, DWORD, HANDLE, WPARAM, LPARAM, MSG)
+from .errors import (UnpluggedError, NoDevicePath, UnknownEventType, UnknownEventCode)
+
 
 
 __version__ = "0.6"
@@ -198,26 +200,6 @@ if sys.version_info.major == 2:
         """Raised when trying to run an operation without the adequate access
         rights - for example filesystem permissions. Corresponds to errno
         EACCES and EPERM."""
-
-
-class UnpluggedError(RuntimeError):
-    """The device requested is not plugged in."""
-    pass
-
-
-class NoDevicePath(RuntimeError):
-    """No evdev device path was given."""
-    pass
-
-
-class UnknownEventType(IndexError):
-    """We don't know what this event is."""
-    pass
-
-
-class UnknownEventCode(IndexError):
-    """We don't know what this event is."""
-    pass
 
 
 class InputEvent(object):  # pylint: disable=useless-object-inheritance
@@ -2426,31 +2408,3 @@ class MicroBitListener(BaseListener):
         self.write_to_pipe(self.events)
 
 
-devices = DeviceManager()  # pylint: disable=invalid-name
-
-
-def get_key():
-    """Get a single keypress from a keyboard."""
-    try:
-        keyboard = devices.keyboards[0]
-    except IndexError:
-        raise UnpluggedError("No keyboard found.")
-    return keyboard.read()
-
-
-def get_mouse():
-    """Get a single movement or click from a mouse."""
-    try:
-        mouse = devices.mice[0]
-    except IndexError:
-        raise UnpluggedError("No mice found.")
-    return mouse.read()
-
-
-def get_gamepad():
-    """Get a single action from a gamepad."""
-    try:
-        gamepad = devices.gamepads[0]
-    except IndexError:
-        raise UnpluggedError("No gamepad found.")
-    return gamepad.read()

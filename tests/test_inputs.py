@@ -3,7 +3,7 @@
 from unittest import TestCase
 
 import inputs
-
+from inputs.devices import get_key, get_mouse, get_gamepad
 from tests.constants import mock
 
 RAW = ""
@@ -36,11 +36,11 @@ class HelpersTestCase(TestCase):
     # There can never be too many tests.
     # pylint: disable=too-many-public-methods
 
-    @mock.patch('inputs.devices')
+    @mock.patch('inputs.devices.devices')
     def setUp(self, mock_devices):
         self.devices = mock_devices
 
-    @mock.patch('inputs.devices')
+    @mock.patch('inputs.devices.devices')
     def test_get_key(self, devices):
         """Get key reads from the first keyboard."""
         keyboard = mock.MagicMock()
@@ -48,19 +48,19 @@ class HelpersTestCase(TestCase):
         keyboard.read = reader
         devices.keyboards = [keyboard]
 
-        inputs.get_key()
+        get_key()
 
         reader.assert_called_once()
 
-    @mock.patch('inputs.devices')
+    @mock.patch('inputs.devices.devices')
     def test_get_key_index_error(self, devices):
         """Raises unpluggged error if no keyboard attached."""
         devices.keyboards = []
         with self.assertRaises(inputs.UnpluggedError):
             # pylint: disable=pointless-statement
-            inputs.get_key()
+            get_key()
 
-    @mock.patch('inputs.devices')
+    @mock.patch('inputs.devices.devices')
     def test_get_mouse(self, devices):
         """Get event reads from the first mouse."""
         mouse = mock.MagicMock()
@@ -68,19 +68,19 @@ class HelpersTestCase(TestCase):
         mouse.read = reader
         devices.mice = [mouse]
 
-        inputs.get_mouse()
+        get_mouse()
 
         reader.assert_called_once()
 
-    @mock.patch('inputs.devices')
+    @mock.patch('inputs.devices.devices')
     def test_get_mouse_index_error(self, devices):
         """Raises unpluggged error if no mouse attached."""
         devices.mice = []
         with self.assertRaises(inputs.UnpluggedError):
             # pylint: disable=pointless-statement
-            inputs.get_mouse()
+            get_mouse()
 
-    @mock.patch('inputs.devices')
+    @mock.patch('inputs.devices.devices')
     def test_get_gamepad(self, devices):
         """Get key reads from the first gamepad."""
         gamepad = mock.MagicMock()
@@ -88,17 +88,17 @@ class HelpersTestCase(TestCase):
         gamepad.read = reader
         devices.gamepads = [gamepad]
 
-        inputs.get_gamepad()
+        get_gamepad()
 
         reader.assert_called_once()
 
-    @mock.patch('inputs.devices')
+    @mock.patch('inputs.devices.devices')
     def test_get_gamepad_index_error(self, devices):
         """Raises unpluggged error if no gamepad attached."""
         devices.gamepads = []
         with self.assertRaises(inputs.UnpluggedError):
             # pylint: disable=pointless-statement
-            inputs.get_gamepad()
+            get_gamepad()
 
 class ConvertTimevalTestCase(TestCase):
     """Test the easy helper methods."""
