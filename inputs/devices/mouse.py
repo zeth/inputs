@@ -1,4 +1,4 @@
-from inputs.constants import APPKIT_MOUSE_PATH, QUARTZ_MOUSE_PATH
+from inputs.constants import APPKIT_MOUSE_PATH
 from inputs.devices.common import InputDevice
 from inputs.platforms import MAC, NIX, WIN
 from inputs.platforms.mac.mouse import appkit_mouse_process

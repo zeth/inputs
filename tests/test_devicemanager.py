@@ -4,7 +4,7 @@ from unittest import TestCase
 
 import inputs
 
-from inputs.devices.common import DeviceManager
+from inputs.devices.manager import DeviceManager
 from tests.constants import mock, PurePath, PYTHON
 
 RAW = ""

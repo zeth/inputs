@@ -1,3 +1,5 @@
+"""High level GamePad class."""
+
 # I made this GamePad class before Mouse and Keyboard above, and have
 # learned a lot about Windows in the process.  This can probably be
 # simplified massively and made to match Mouse and Keyboard more.
@@ -20,7 +22,7 @@ from inputs.constants import XINPUT_ERROR_DEVICE_NOT_CONNECTED, XINPUT_ERROR_SUC
 from inputs.errors import UnknownEventType, UnpluggedError, PERMISSIONS_ERROR_TEXT
 from inputs.utils import EVENT_FORMAT, convert_timeval
 
-from ..platforms import NIX, WIN, MAC
+from ..platforms import NIX, WIN
 from .common import InputDevice
 
 if NIX:
@@ -78,7 +80,7 @@ class GamePad(InputDevice):
     """A gamepad or other joystick-like device."""
 
     def __init__(self, manager, device_path, char_path_override=None):
-        super(GamePad, self).__init__(manager, device_path, char_path_override)
+        super().__init__(manager, device_path, char_path_override)
         self._write_file = None
         self.__device_number = None
         if WIN:

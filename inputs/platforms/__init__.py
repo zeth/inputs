@@ -12,7 +12,7 @@ MAC = True if platform.system() == "Darwin" else False
 NIX = True if platform.system() == "Linux" else False
 
 if WIN:
-    # pylint: disable=wrong-import-position
+    # pylint: disable=wrong-import-position,ungrouped-imports
     import ctypes.wintypes
 
     DWORD = ctypes.wintypes.DWORD

@@ -1,8 +1,10 @@
-import ctypes
-from ctypes.wintypes import LPARAM
-from inputs.constants import APPKIT_KB_PATH, WIN_KEYBOARD_CODES
+"""Keyboard device class."""
+
+from inputs.constants import APPKIT_KB_PATH
 from inputs.devices.common import InputDevice
-from inputs.platforms import DWORD, MSG, NIX, MAC, WIN, WPARAM, BaseListener
+from inputs.platforms import NIX, MAC, WIN
+from inputs.platforms.mac.keyboard import mac_keyboard_process
+from inputs.platforms.win.keyboard import keyboard_process
 
 
 class Keyboard(InputDevice):

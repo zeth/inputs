@@ -38,7 +38,7 @@ class MicroBitPad(GamePad):
 
         super(MicroBitPad, self).__init__(manager, device_path, char_path_override)
 
-        # pylint: disable=no-member,import-error
+        # pylint: disable=no-member,import-error,import-outside-toplevel
         import microbit
 
         self.microbit = microbit
@@ -151,7 +151,7 @@ class MicroBitListener(BaseListener):
         )
         self.dpad = True
         self.sensitivity = 300
-        # pylint: disable=import-error
+        # pylint: disable=import-error,import-outside-toplevel
         import microbit
 
         self.microbit = microbit

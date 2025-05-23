@@ -5,7 +5,7 @@ from unittest import TestCase
 import sys
 import struct
 
-from inputs.devices.common import DeviceManager, InputDevice
+from inputs.devices.manager import DeviceManager, InputDevice
 from tests.constants import mock
 
 import inputs

@@ -1,4 +1,4 @@
-from inputs.devices.common import DeviceManager
+from inputs.devices.manager import DeviceManager
 from ..errors import UnpluggedError
 
 devices = DeviceManager()  # pylint: disable=invalid-name
