@@ -57,31 +57,15 @@ from multiprocessing import Process, Pipe
 import ctypes
 
 from .constants import (EVENT_MAP, MAC_EVENT_CODES, EVENT_TYPES, MAC_KEYS, XINPUT_DLL_NAMES, XINPUT_ERROR_SUCCESS, XINPUT_ERROR_DEVICE_NOT_CONNECTED)
-from .platforms import (WIN, MAC, NIX)
+from .platforms import (WIN, MAC, NIX, DWORD, HANDLE, WPARAM, LPARAM, MSG)
 
 
 __version__ = "0.6"
 
 
-if WIN:
-    # pylint: disable=wrong-import-position
-    import ctypes.wintypes
-    DWORD = ctypes.wintypes.DWORD
-    HANDLE = ctypes.wintypes.HANDLE
-    WPARAM = ctypes.wintypes.WPARAM
-    LPARAM = ctypes.wintypes.WPARAM
-    MSG = ctypes.wintypes.MSG
-else:
-    DWORD = ctypes.c_ulong
-    HANDLE = ctypes.c_void_p
-    WPARAM = ctypes.c_ulonglong
-    LPARAM = ctypes.c_ulonglong
-    MSG = ctypes.Structure
-
 if NIX:
     from fcntl import ioctl
 
-OLD = sys.version_info < (3, 4)
 
 PERMISSIONS_ERROR_TEXT = (
     "The user (that this program is being run as) does "
@@ -102,14 +86,11 @@ def chunks(raw):
         yield struct.unpack(EVENT_FORMAT, raw[i:i+EVENT_SIZE])
 
 
-if OLD:
-    def iter_unpack(raw):
-        """Yield successive EVENT_SIZE chunks from message."""
-        return chunks(raw)
-else:
-    def iter_unpack(raw):
-        """Yield successive EVENT_SIZE chunks from message."""
-        return struct.iter_unpack(EVENT_FORMAT, raw)
+
+
+def iter_unpack(raw):
+    """Yield successive EVENT_SIZE chunks from message."""
+    return struct.iter_unpack(EVENT_FORMAT, raw)
 
 
 def convert_timeval(seconds_since_epoch):
