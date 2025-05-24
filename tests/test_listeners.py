@@ -9,9 +9,8 @@ from inputs.platforms.baselistener import BaseListener
 import inputs.platforms.baselistener
 from inputs.platforms.c import iter_unpack
 import inputs.platforms.system
-from tests.constants import mock, PYTHON
-if PYTHON == 3:
-    mock._magics.add('__round__')
+from unittest import mock
+mock._magics.add('__round__')
 
 RAW = ""
 

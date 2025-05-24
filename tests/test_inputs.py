@@ -7,9 +7,7 @@ from inputs.devices.event import InputEvent
 from inputs.platforms.c import convert_timeval
 from inputs.utils import get_key, get_mouse, get_gamepad
 from inputs.errors import UnpluggedError
-
-
-from tests.constants import mock
+from unittest import mock
 
 RAW = ""
 

@@ -5,7 +5,7 @@ from unittest import TestCase
 import struct
 
 from inputs.errors import NoDevicePath
-from tests.constants import mock
+from unittest import mock
 
 import inputs
 

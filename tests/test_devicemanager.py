@@ -4,7 +4,8 @@ from unittest import TestCase
 
 import inputs
 
-from tests.constants import mock, PurePath, PYTHON
+from unittest import mock
+from pathlib import PurePath
 
 RAW = ""
 
@@ -233,14 +234,8 @@ class DeviceManagerTestCase(TestCase):
 
     def test_parse_invalid_path(self):
         """Raise warning for invalid path."""
-        if PYTHON == 3:
-            # Disable pylint on Python 2 moaning about assertWarns
-            # pylint: disable=no-member
-            with self.assertWarns(RuntimeWarning):
-                self.device_manger._parse_device_path("Bob")
-
-        else:
-            self.device_manger._parse_device_path("Jim")
+        with self.assertWarns(RuntimeWarning):
+            self.device_manger._parse_device_path("Bob")
 
         self.assertEqual(self.device_manger._raw, [])
         self.assertEqual(self.device_manger.keyboards, [])

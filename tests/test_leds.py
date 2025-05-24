@@ -5,11 +5,10 @@ import errno
 import os
 
 from inputs.platforms.c import iter_unpack
-from tests.constants import mock, PurePath, PYTHON
+from unittest import mock
+from pathlib import PurePath
 
 import inputs
-if PYTHON == 2:
-    from inputs import PermissionError  # pylint: disable=redefined-builtin
 
 RAW = ""
 
