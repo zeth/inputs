@@ -2,7 +2,7 @@
 
 from __future__ import print_function
 
-from inputs import get_key
+from inputs.utils import get_key
 
 
 def main():
@@ -12,6 +12,7 @@ def main():
         if events:
             for event in events:
                 print(event.ev_type, event.code, event.state)
+
 
 if __name__ == "__main__":
     main()

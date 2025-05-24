@@ -6,6 +6,7 @@ from ..base import InputDevice
 from ._mac import mac_keyboard_process
 from ._win import win_keyboard_process
 
+
 class Keyboard(InputDevice):
     """A keyboard or other key-like device.
 

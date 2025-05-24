@@ -3,7 +3,7 @@
 from __future__ import print_function
 
 
-from inputs import get_gamepad
+from inputs.utils import get_gamepad
 
 
 def main():

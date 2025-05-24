@@ -2,7 +2,7 @@
 
 from __future__ import print_function
 
-from inputs import devices
+from inputs.utils import devices
 
 
 def main():

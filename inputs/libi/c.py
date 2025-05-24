@@ -33,9 +33,11 @@ def chunks(raw):
     for i in range(0, len(raw), EVENT_SIZE):
         yield struct.unpack(EVENT_FORMAT, raw[i : i + EVENT_SIZE])
 
+
 def iter_unpack(raw):
     """Yield successive EVENT_SIZE chunks from message."""
     return struct.iter_unpack(EVENT_FORMAT, raw)
+
 
 def convert_timeval(seconds_since_epoch):
     """Convert time into C style timeval."""
@@ -43,4 +45,3 @@ def convert_timeval(seconds_since_epoch):
     microseconds = math.floor(frac * 1000000)
     seconds = math.floor(whole)
     return seconds, microseconds
-

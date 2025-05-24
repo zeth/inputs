@@ -1,4 +1,5 @@
 """Use the MicroBit as an input device."""
+
 import time
 
 from ...libi.baselistener import BaseListener

@@ -1,6 +1,5 @@
 """Custom exceptions for the inputs library."""
 
-
 PERMISSIONS_ERROR_TEXT = (
     "The user (that this program is being run as) does "
     "not have permission to access the input events, "

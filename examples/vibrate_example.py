@@ -3,13 +3,13 @@
 from __future__ import print_function
 import time
 
-import inputs
+from inputs.utils import devices
 
 
 def main(gamepad=None):
     """Vibrate the gamepad."""
     if not gamepad:
-        gamepad = inputs.devices.gamepads[0]
+        gamepad = devices.gamepads[0]
 
     # Vibrate left
     gamepad.set_vibration(1, 0, 1000)

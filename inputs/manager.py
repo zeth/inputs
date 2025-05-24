@@ -1,7 +1,7 @@
 """Device manager for inputs.
 This module provides a way to access all connected and detectible user input
 devices, such as keyboards, mice, gamepads, and other HID devices.
-""" 
+"""
 
 import os
 import glob
@@ -15,10 +15,7 @@ from .constants import (
     EVENT_MAP,
 )
 
-from .libi.errors import (
-    UnknownEventType,
-    UnknownEventCode
-)
+from .libi.errors import UnknownEventType, UnknownEventCode
 
 from .libi.system import WIN, MAC, NIX
 from .libi.c import DWORD, HANDLE

@@ -52,10 +52,7 @@ from .constants import (
     EVENT_MAP,
 )
 
-from .libi.errors import (
-    UnknownEventType,
-    UnknownEventCode
-)
+from .libi.errors import UnknownEventType, UnknownEventCode
 
 from .libi.system import WIN, MAC, NIX
 from .libi.c import DWORD, HANDLE
@@ -68,4 +65,3 @@ from .devices.led.led import LED, GamepadLED, SystemLED
 from .manager import DeviceManager
 
 __version__ = "0.6"
-

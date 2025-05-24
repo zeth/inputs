@@ -1,6 +1,7 @@
 import ctypes
 import time
 
+
 class XinputGamepad(ctypes.Structure):
     """Describes the current state of the Xbox 360 Controller.
 
