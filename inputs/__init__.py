@@ -58,41 +58,21 @@ from multiprocessing import Process, Pipe
 import ctypes
 
 from .constants import (
-    SPECIAL_DEVICES,
-    XINPUT_MAPPING,
     XINPUT_DLL_NAMES,
     XINPUT_ERROR_DEVICE_NOT_CONNECTED,
     XINPUT_ERROR_SUCCESS,
-    XBOX_STYLE_LED_CONTROL,
-    DEVICE_PROPERTIES,
     EVENT_TYPES,
-    SYNCHRONIZATION_EVENTS,
-    KEYS_AND_BUTTONS,
-    RELATIVE_AXES,
-    ABSOLUTE_AXES,
-    SWITCH_EVENTS,
-    MISC_EVENTS,
-    LEDS,
-    LED_TYPE_CODES,
-    AUTOREPEAT_VALUES,
-    SOUNDS,
     WIN_KEYBOARD_CODES,
     WIN_MOUSE_CODES,
-    WINCODES,
     MAC_EVENT_CODES,
     MAC_KEYS,
-    FORCE_FEEDBACK,
-    FORCE_FEEDBACK_STATUS,
-    POWER,
-    MAX,
-    CURRENT,
     EVENT_MAP,
     APPKIT_KB_PATH,
     QUARTZ_MOUSE_PATH,
     APPKIT_MOUSE_PATH,
 )
 
-__version__ = "0.5"
+__version__ = "0.6"
 
 
 WIN = True if platform.system() == "Windows" else False
