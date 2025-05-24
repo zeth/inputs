@@ -4,6 +4,7 @@ from unittest import TestCase
 import errno
 import os
 
+from inputs.platforms.c import iter_unpack
 from tests.constants import mock, PurePath, PYTHON
 
 import inputs
@@ -126,7 +127,7 @@ class LEDTestCase(TestCase):
         write_call = mock_write_device.method_calls[0]
         self.assertEqual(write_call[0], 'write')
         eventlist = write_call[1][0]
-        event_info = next(inputs.iter_unpack(eventlist))
+        event_info = next(iter_unpack(eventlist))
         self.assertTrue(event_info[0] > 0)
         self.assertTrue(event_info[1] > 0)
         self.assertEqual(event_info[2:], (1, 2, 3))
@@ -252,7 +253,7 @@ class SystemLEDTestCase(TestCase):
         write_call = mock_write_device.method_calls[0]
         self.assertEqual(write_call[0], 'write')
         eventlist = write_call[1][0]
-        event_info = next(inputs.iter_unpack(eventlist))
+        event_info = next(iter_unpack(eventlist))
         self.assertTrue(event_info[0] > 0)
         self.assertTrue(event_info[1] > 0)
         self.assertEqual(event_info[2:], (17, 1, 1))

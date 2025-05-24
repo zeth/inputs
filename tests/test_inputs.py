@@ -3,8 +3,11 @@
 # pylint: disable=protected-access,no-self-use
 from unittest import TestCase
 
+from inputs.devices.event import InputEvent
+from inputs.platforms.c import convert_timeval
 from inputs.utils import get_key, get_mouse, get_gamepad
-from inputs import UnpluggedError, InputEvent, convert_timeval
+from inputs.errors import UnpluggedError
+
 
 from tests.constants import mock
 

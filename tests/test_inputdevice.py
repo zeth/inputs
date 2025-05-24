@@ -2,20 +2,16 @@
 # pylint: disable=protected-access,no-self-use
 from unittest import TestCase
 
-import sys
 import struct
 
+from inputs.errors import NoDevicePath
 from tests.constants import mock
 
 import inputs
 
-if sys.version_info.major == 2:
-    # pylint: disable=redefined-builtin
-    from inputs import PermissionError
-
 KBD_PATH = '/dev/input/by-path/platform-i8042-serio-0-event-kbd'
 EV_PATH = '/dev/input/event4'
-REPR = 'inputs.InputDevice("' + KBD_PATH + '")'
+REPR = 'inputs.devices.device.InputDevice("' + KBD_PATH + '")'
 CHARFILE = 'MY_CHARACTER_FILE'
 
 
@@ -41,7 +37,7 @@ class InputDeviceTestCase(TestCase):
     def test_init_no_device_path_at_all(self):
         """Without a device path, it raises an exception."""
         manager = mock.MagicMock()
-        with self.assertRaises(inputs.NoDevicePath):
+        with self.assertRaises(NoDevicePath):
             inputs.InputDevice(manager)
         manager.assert_not_called()
 
@@ -49,7 +45,7 @@ class InputDeviceTestCase(TestCase):
         """With a device path of None, it has a device path."""
         manager = mock.MagicMock()
         inputs.InputDevice._device_path = None
-        with self.assertRaises(inputs.NoDevicePath):
+        with self.assertRaises(NoDevicePath):
             inputs.InputDevice(manager)
         del inputs.InputDevice._device_path
 
