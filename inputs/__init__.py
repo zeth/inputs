@@ -72,6 +72,15 @@ from .constants import (
     APPKIT_MOUSE_PATH,
 )
 
+from .errors import (
+    PERMISSIONS_ERROR_TEXT,
+    UnpluggedError,
+    NoDevicePath,
+    UnknownEventType,
+    UnknownEventCode
+)
+
+
 __version__ = "0.6"
 
 
@@ -99,13 +108,6 @@ if NIX:
     from fcntl import ioctl
 
 OLD = sys.version_info < (3, 4)
-
-PERMISSIONS_ERROR_TEXT = (
-    "The user (that this program is being run as) does "
-    "not have permission to access the input events, "
-    "check groups and permissions, for example, on "
-    "Debian, the user needs to be in the input group."
-)
 
 # Standard event format for most devices.
 # long, long, unsigned short, unsigned short, int
@@ -247,30 +249,6 @@ if sys.version_info.major == 2:
         """Raised when trying to run an operation without the adequate access
         rights - for example filesystem permissions. Corresponds to errno
         EACCES and EPERM."""
-
-
-class UnpluggedError(RuntimeError):
-    """The device requested is not plugged in."""
-
-    pass
-
-
-class NoDevicePath(RuntimeError):
-    """No evdev device path was given."""
-
-    pass
-
-
-class UnknownEventType(IndexError):
-    """We don't know what this event is."""
-
-    pass
-
-
-class UnknownEventCode(IndexError):
-    """We don't know what this event is."""
-
-    pass
 
 
 class InputEvent(object):  # pylint: disable=useless-object-inheritance
