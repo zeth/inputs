@@ -430,12 +430,7 @@ class DeviceManagerPlatformTestCase(TestCase):
             mock_windll,
             dll_names):
         """Fails to find an xinput library. """
-        if PYTHON == 3:
-            # Disable pylint on Python 2 moaning about assertWarns
-            # pylint: disable=no-member
-            with self.assertWarns(RuntimeWarning):
-                self.device_manager._find_xinput()
-        else:
+        with self.assertWarns(RuntimeWarning):
             self.device_manager._find_xinput()
 
         self.assertIsNone(self.device_manager.xinput)
