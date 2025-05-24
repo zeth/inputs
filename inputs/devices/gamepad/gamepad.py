@@ -22,7 +22,7 @@ from ...constants import XINPUT_ERROR_DEVICE_NOT_CONNECTED, XINPUT_ERROR_SUCCESS
 from ...errors import PERMISSIONS_ERROR_TEXT, UnknownEventType, UnpluggedError
 from ...platforms.c import (EVENT_FORMAT, convert_timeval)
 from ...platforms.system import NIX, WIN
-from ..device import InputDevice
+from ..base import InputDevice
 from ._win import XinputGamepad, XinputState, XinputVibration, delay_and_stop
 
 

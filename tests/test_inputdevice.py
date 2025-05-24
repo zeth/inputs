@@ -7,12 +7,12 @@ import struct
 from inputs.errors import NoDevicePath
 
 import inputs
-from inputs.devices.device import InputDevice
+from inputs.devices.base import InputDevice
 from inputs.platforms.c import EVENT_FORMAT, EVENT_SIZE
 
 KBD_PATH = '/dev/input/by-path/platform-i8042-serio-0-event-kbd'
 EV_PATH = '/dev/input/event4'
-REPR = 'inputs.devices.device.InputDevice("' + KBD_PATH + '")'
+REPR = 'inputs.devices.base.InputDevice("' + KBD_PATH + '")'
 CHARFILE = 'MY_CHARACTER_FILE'
 
 

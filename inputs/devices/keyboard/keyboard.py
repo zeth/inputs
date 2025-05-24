@@ -2,7 +2,7 @@
 
 from ...constants import APPKIT_KB_PATH
 from ...platforms.system import NIX, WIN, MAC
-from ..device import InputDevice
+from ..base import InputDevice
 from ._mac import mac_keyboard_process
 from ._win import win_keyboard_process
 

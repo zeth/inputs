@@ -2,7 +2,7 @@
 
 from ...constants import APPKIT_MOUSE_PATH, QUARTZ_MOUSE_PATH
 from ...platforms.system import NIX, WIN, MAC
-from ..device import InputDevice
+from ..base import InputDevice
 from ._win import win_mouse_process
 from ._mac import appkit_mouse_process, quartz_mouse_process
 

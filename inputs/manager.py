@@ -23,7 +23,7 @@ from .errors import (
 from .platforms.system import WIN, MAC, NIX
 from .platforms.c import DWORD, HANDLE
 from .devices.gamepad.gamepad import GamePad
-from .devices.device import OtherDevice
+from .devices.base import OtherDevice
 from .devices.gamepad._win import XinputState
 from .devices.mouse.mouse import Mouse, MightyMouse
 from .devices.keyboard.keyboard import Keyboard

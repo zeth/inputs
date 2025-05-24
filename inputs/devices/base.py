@@ -8,7 +8,7 @@ import io
 from ..platforms.c import EVENT_SIZE, iter_unpack
 from ..errors import NoDevicePath, PERMISSIONS_ERROR_TEXT
 from ..platforms.system import NIX, WIN, MAC
-from .event import InputEvent
+from ..platforms.event import InputEvent
 
 
 class InputDevice(object):  # pylint: disable=useless-object-inheritance
