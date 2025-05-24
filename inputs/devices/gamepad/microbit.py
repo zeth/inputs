@@ -1,7 +1,7 @@
 """Use the MicroBit as an input device."""
 import time
 
-from ...platforms.baselistener import BaseListener
+from ...libi.baselistener import BaseListener
 from .gamepad import GamePad
 
 

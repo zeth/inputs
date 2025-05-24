@@ -4,11 +4,11 @@ from unittest import TestCase, mock
 
 import struct
 
-from inputs.errors import NoDevicePath
+from inputs.libi.errors import NoDevicePath
 
 import inputs
 from inputs.devices.base import InputDevice
-from inputs.platforms.c import EVENT_FORMAT, EVENT_SIZE
+from inputs.libi.c import EVENT_FORMAT, EVENT_SIZE
 
 KBD_PATH = '/dev/input/by-path/platform-i8042-serio-0-event-kbd'
 EV_PATH = '/dev/input/event4'

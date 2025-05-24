@@ -1,5 +1,5 @@
 from ...constants import MAC_KEYS
-from ...platforms.baselistener import BaseListener
+from ...libi.baselistener import BaseListener
 
 
 class AppKitKeyboardListener(BaseListener):

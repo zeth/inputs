@@ -3,8 +3,8 @@
 import ctypes
 
 from ...constants import WIN_MOUSE_CODES
-from ...platforms.baselistener import BaseListener
-from ...platforms.c import DWORD, LPARAM, MSG, WPARAM
+from ...libi.baselistener import BaseListener
+from ...libi.c import DWORD, LPARAM, MSG, WPARAM
 
 
 class MSLLHookStruct(ctypes.Structure):

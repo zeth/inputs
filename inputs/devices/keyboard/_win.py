@@ -1,8 +1,8 @@
 import ctypes
 
 from ...constants import WIN_KEYBOARD_CODES
-from ...platforms.baselistener import BaseListener
-from ...platforms.c import DWORD, LPARAM, MSG, WPARAM
+from ...libi.baselistener import BaseListener
+from ...libi.c import DWORD, LPARAM, MSG, WPARAM
 
 
 class KBDLLHookStruct(ctypes.Structure):

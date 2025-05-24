@@ -1,5 +1,5 @@
 from ...constants import MAC_EVENT_CODES
-from ...platforms.baselistener import BaseListener
+from ...libi.baselistener import BaseListener
 
 
 class QuartzMouseBaseListener(BaseListener):

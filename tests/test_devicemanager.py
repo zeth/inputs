@@ -7,7 +7,7 @@ import inputs
 from unittest import mock
 from pathlib import PurePath
 
-from inputs.errors import UnknownEventType
+from inputs.libi.errors import UnknownEventType
 from inputs.manager import DeviceManager
 
 

@@ -10,7 +10,7 @@ from pathlib import PurePath
 import inputs.devices
 import inputs.devices.led
 from inputs.devices.led.led import LED, SystemLED
-from inputs.platforms.c import iter_unpack
+from inputs.libi.c import iter_unpack
 
 import inputs
 

@@ -5,10 +5,10 @@ from unittest import TestCase
 import inputs
 
 from inputs.devices.mouse._mac import QuartzMouseBaseListener
-from inputs.errors import UnknownEventType
+from inputs.libi.errors import UnknownEventType
 from inputs.devices.keyboard._mac import AppKitKeyboardListener
-from inputs.platforms.baselistener import BaseListener
-from inputs.platforms.c import iter_unpack
+from inputs.libi.baselistener import BaseListener
+from inputs.libi.c import iter_unpack
 from unittest import mock
 
 from inputs.devices.mouse._mac import AppKitMouseBaseListener

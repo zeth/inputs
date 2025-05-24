@@ -5,9 +5,9 @@ import os
 import struct
 import time
 
-from ...errors import PERMISSIONS_ERROR_TEXT
-from ...platforms.c import EVENT_FORMAT, convert_timeval
-from ...platforms.system import NIX
+from ...libi.errors import PERMISSIONS_ERROR_TEXT
+from ...libi.c import EVENT_FORMAT, convert_timeval
+from ...libi.system import NIX
 
 
 class LED:

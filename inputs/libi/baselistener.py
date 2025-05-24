@@ -1,7 +1,7 @@
 import struct
 import time
 from ..constants import EVENT_TYPES
-from ..errors import UnknownEventType
+from .errors import UnknownEventType
 from .c import EVENT_FORMAT, convert_timeval
 from .system import WIN
 

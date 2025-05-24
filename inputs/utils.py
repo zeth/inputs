@@ -1,5 +1,5 @@
 from . import DeviceManager
-from .errors import UnpluggedError
+from .libi.errors import UnpluggedError
 
 devices = DeviceManager()  # pylint: disable=invalid-name
 

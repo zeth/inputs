@@ -15,13 +15,13 @@ from .constants import (
     EVENT_MAP,
 )
 
-from .errors import (
+from .libi.errors import (
     UnknownEventType,
     UnknownEventCode
 )
 
-from .platforms.system import WIN, MAC, NIX
-from .platforms.c import DWORD, HANDLE
+from .libi.system import WIN, MAC, NIX
+from .libi.c import DWORD, HANDLE
 from .devices.gamepad.gamepad import GamePad
 from .devices.base import OtherDevice
 from .devices.gamepad._win import XinputState
