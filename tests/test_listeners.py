@@ -6,6 +6,7 @@ import inputs
 
 from inputs.devices.mouse._mac import QuartzMouseBaseListener
 from inputs.errors import UnknownEventType
+from inputs.devices.keyboard._mac import AppKitKeyboardListener
 from inputs.platforms.baselistener import BaseListener
 from inputs.platforms.c import iter_unpack
 from unittest import mock
@@ -789,7 +790,7 @@ class AppKitKeyboardListenerTestCase(TestCase):
     def test_init(self):
         """The created object knows the keyboard codes."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitKeyboardListener(pipe)
+        listener = AppKitKeyboardListener(pipe)
         self.assertEqual(listener.events, [])
         self.assertEqual(listener.codes[0], 30)
         self.assertEqual(listener.codes[120], 60)
@@ -798,7 +799,7 @@ class AppKitKeyboardListenerTestCase(TestCase):
     def test_get_event_key_code(self):
         """Get event type called keyCode()."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitKeyboardListener(pipe)
+        listener = AppKitKeyboardListener(pipe)
         event = mock.MagicMock()
         event_type = listener._get_event_key_code(event)
         call = event.method_calls[0]
@@ -808,7 +809,7 @@ class AppKitKeyboardListenerTestCase(TestCase):
     def test_get_event_type(self):
         """Get event type called type()."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitKeyboardListener(pipe)
+        listener = AppKitKeyboardListener(pipe)
         event = mock.MagicMock()
         event_type = listener._get_event_type(event)
         call = event.method_calls[0]
@@ -818,7 +819,7 @@ class AppKitKeyboardListenerTestCase(TestCase):
     def test_get_flag_value(self):
         """Get event flags calls event.modifierFlags()."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitKeyboardListener(pipe)
+        listener = AppKitKeyboardListener(pipe)
         event = mock.MagicMock()
         flag_value = listener._get_flag_value(event)
         call = event.method_calls[0]
@@ -830,7 +831,7 @@ class AppKitKeyboardListenerTestCase(TestCase):
     def test_get_flag_value_something(self):
         """Get event flags calls event.modifierFlags()."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitKeyboardListener(pipe)
+        listener = AppKitKeyboardListener(pipe)
         event = mock.MagicMock()
         modifier_flags = mock.MagicMock(return_value=256)
         event.attach_mock(modifier_flags, 'modifierFlags')
@@ -842,7 +843,7 @@ class AppKitKeyboardListenerTestCase(TestCase):
     def test_get_key_value_type_10(self):
         """Event type 10 should return 1."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitKeyboardListener(pipe)
+        listener = AppKitKeyboardListener(pipe)
         event = mock.MagicMock()
         key_value = listener._get_key_value(event, 10)
         self.assertEqual(key_value, 1)
@@ -850,7 +851,7 @@ class AppKitKeyboardListenerTestCase(TestCase):
     def test_get_key_value_type_11(self):
         """Event type 11 should return 0."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitKeyboardListener(pipe)
+        listener = AppKitKeyboardListener(pipe)
         event = mock.MagicMock()
         key_value = listener._get_key_value(event, 11)
         self.assertEqual(key_value, 0)
@@ -858,7 +859,7 @@ class AppKitKeyboardListenerTestCase(TestCase):
     def test_get_key_value_other_type(self):
         """Unknown event type should return -1."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitKeyboardListener(pipe)
+        listener = AppKitKeyboardListener(pipe)
         event = mock.MagicMock()
         key_value = listener._get_key_value(event, 15)
         self.assertEqual(key_value, -1)
@@ -866,24 +867,24 @@ class AppKitKeyboardListenerTestCase(TestCase):
     def test_get_key_value_type_12(self):
         """Event type 12 should check the flag value."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitKeyboardListener(pipe)
+        listener = AppKitKeyboardListener(pipe)
         event = mock.MagicMock()
         key_value = listener._get_key_value(event, 12)
         self.assertEqual(key_value, 1)
 
     @mock.patch.object(
-        inputs.AppKitKeyboardListener,
+        AppKitKeyboardListener,
         'write_to_pipe')
     @mock.patch.object(
-        inputs.AppKitKeyboardListener,
+        AppKitKeyboardListener,
         '_get_flag_value',
         return_value=0)
     @mock.patch.object(
-        inputs.AppKitKeyboardListener,
+        AppKitKeyboardListener,
         '_get_event_type',
         return_value=10)
     @mock.patch.object(
-        inputs.AppKitKeyboardListener,
+        AppKitKeyboardListener,
         '_get_event_key_code',
         return_value=4)
     def test_handle_input(self,
@@ -893,7 +894,7 @@ class AppKitKeyboardListenerTestCase(TestCase):
                           mock_write_to_pipe):
         """Mac Keyboard events are processed."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitKeyboardListener(pipe)
+        listener = AppKitKeyboardListener(pipe)
         event = mock.MagicMock()
         listener.handle_input(event)
         self.assertEqual(len(listener.events), 3)
@@ -904,18 +905,18 @@ class AppKitKeyboardListenerTestCase(TestCase):
         mock_write_to_pipe.assert_called_once_with(listener.events)
 
     @mock.patch.object(
-        inputs.AppKitKeyboardListener,
+        AppKitKeyboardListener,
         'write_to_pipe')
     @mock.patch.object(
-        inputs.AppKitKeyboardListener,
+        AppKitKeyboardListener,
         '_get_flag_value',
         return_value=0)
     @mock.patch.object(
-        inputs.AppKitKeyboardListener,
+        AppKitKeyboardListener,
         '_get_event_type',
         return_value=10)
     @mock.patch.object(
-        inputs.AppKitKeyboardListener,
+        AppKitKeyboardListener,
         '_get_event_key_code',
         return_value=256)
     def test_handle_input_unknown_code(self,
@@ -925,7 +926,7 @@ class AppKitKeyboardListenerTestCase(TestCase):
                                        mock_write_to_pipe):
         """Mac Keyboard events are processed."""
         pipe = mock.MagicMock()
-        listener = inputs.AppKitKeyboardListener(pipe)
+        listener = AppKitKeyboardListener(pipe)
         event = mock.MagicMock()
         listener.handle_input(event)
         self.assertEqual(len(listener.events), 3)

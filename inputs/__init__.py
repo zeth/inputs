@@ -48,18 +48,11 @@ from warnings import warn
 import ctypes
 
 
-from .devices.led.led import LED, GamepadLED, SystemLED
-
-from .platforms.baselistener import BaseListener
-
 from .constants import (
     XINPUT_DLL_NAMES,
     XINPUT_ERROR_DEVICE_NOT_CONNECTED,
     XINPUT_ERROR_SUCCESS,
-    WIN_KEYBOARD_CODES,
-    MAC_KEYS,
     EVENT_MAP,
-    APPKIT_KB_PATH,
 )
 
 from .errors import (
@@ -68,284 +61,19 @@ from .errors import (
 )
 
 from .platforms.system import WIN, MAC, NIX
-from .platforms.c import DWORD, HANDLE, WPARAM, LPARAM, MSG
+from .platforms.c import DWORD, HANDLE
 from .devices.gamepad.gamepad import GamePad
-from .devices.device import InputDevice
+from .devices.device import OtherDevice
 from .devices.gamepad._win import XinputState
 from .devices.mouse.mouse import Mouse, MightyMouse
-
+from .devices.keyboard.keyboard import Keyboard
+from .devices.led.led import LED, GamepadLED, SystemLED
 
 __version__ = "0.6"
 
 
 if NIX:
     from fcntl import ioctl
-
-
-
-# Now comes all the structs we need to parse the infomation coming
-# from Windows.
-
-
-class KBDLLHookStruct(ctypes.Structure):
-    """Contains information about a low-level keyboard input event.
-
-    For full details see Microsoft's documentation:
-
-    https://msdn.microsoft.com/en-us/library/windows/desktop/
-    ms644967%28v=vs.85%29.aspx
-    """
-
-    # pylint: disable=too-few-public-methods
-    _fields_ = [
-        ("vk_code", DWORD),
-        ("scan_code", DWORD),
-        ("flags", DWORD),
-        ("time", ctypes.c_int),
-    ]
-
-
-
-
-
-class WindowsKeyboardListener(BaseListener):
-    """Loosely emulate Evdev keyboard behaviour on Windows.  Listen (hook
-    in Windows terminology) for key events then buffer them in a pipe.
-    """
-
-    def __init__(self, pipe, codes=None):
-        self.pipe = pipe
-        self.hooked = None
-        self.pointer = None
-        super(WindowsKeyboardListener, self).__init__(pipe, codes)
-
-    @staticmethod
-    def listen():
-        """Listen for keyboard input."""
-        msg = MSG()
-        ctypes.windll.user32.GetMessageA(ctypes.byref(msg), 0, 0, 0)
-
-    def get_fptr(self):
-        """Get the function pointer."""
-        cmpfunc = ctypes.CFUNCTYPE(
-            ctypes.c_int, WPARAM, LPARAM, ctypes.POINTER(KBDLLHookStruct)
-        )
-        return cmpfunc(self.handle_input)
-
-    def install_handle_input(self):
-        """Install the hook."""
-        self.pointer = self.get_fptr()
-
-        self.hooked = ctypes.windll.user32.SetWindowsHookExA(
-            13, self.pointer, ctypes.windll.kernel32.GetModuleHandleW(None), 0
-        )
-        if not self.hooked:
-            return False
-        return True
-
-    def uninstall_handle_input(self):
-        """Remove the hook."""
-        if self.hooked is None:
-            return
-        ctypes.windll.user32.UnhookWindowsHookEx(self.hooked)
-        self.hooked = None
-
-    def handle_input(self, ncode, wparam, lparam):
-        """Process the key input."""
-        value = WIN_KEYBOARD_CODES[wparam]
-        scan_code = lparam.contents.scan_code
-        vk_code = lparam.contents.vk_code
-        self.update_timeval()
-
-        events = []
-        # Add key event
-        scan_key, key_event = self.emulate_press(
-            vk_code, scan_code, value, self.timeval
-        )
-        events.append(scan_key)
-        events.append(key_event)
-
-        # End with a sync marker
-        events.append(self.sync_marker(self.timeval))
-
-        # We are done
-        self.write_to_pipe(events)
-
-        return ctypes.windll.user32.CallNextHookEx(self.hooked, ncode, wparam, lparam)
-
-
-def keyboard_process(pipe):
-    """Single subprocess for reading keyboard events on Windows."""
-    keyboard = WindowsKeyboardListener(pipe)
-    keyboard.listen()
-
-
-class AppKitKeyboardListener(BaseListener):
-    """Emulate an evdev keyboard on the Mac."""
-
-    def __init__(self, pipe):
-        super(AppKitKeyboardListener, self).__init__(pipe, codes=dict(MAC_KEYS))
-
-    @staticmethod
-    def _get_event_key_code(event):
-        """Get the key code."""
-        return event.keyCode()
-
-    @staticmethod
-    def _get_event_type(event):
-        """Get the event type."""
-        return event.type()
-
-    @staticmethod
-    def _get_flag_value(event):
-        """Note, this may be able to be made more accurate,
-        i.e. handle two modifier keys at once."""
-        flags = event.modifierFlags()
-        if flags == 0x100:
-            value = 0
-        else:
-            value = 1
-        return value
-
-    def _get_key_value(self, event, event_type):
-        """Get the key value."""
-        if event_type == 10:
-            value = 1
-        elif event_type == 11:
-            value = 0
-        elif event_type == 12:
-            value = self._get_flag_value(event)
-        else:
-            value = -1
-        return value
-
-    def handle_input(self, event):
-        """Process they keyboard input."""
-        self.update_timeval()
-        self.events = []
-        code = self._get_event_key_code(event)
-
-        if code in self.codes:
-            new_code = self.codes[code]
-        else:
-            new_code = 0
-        event_type = self._get_event_type(event)
-        value = self._get_key_value(event, event_type)
-        scan_event, key_event = self.emulate_press(new_code, code, value, self.timeval)
-
-        self.events.append(scan_event)
-        self.events.append(key_event)
-        # End with a sync marker
-        self.events.append(self.sync_marker(self.timeval))
-        # We are done
-        self.write_to_pipe(self.events)
-
-
-def mac_keyboard_process(pipe):
-    """Single subprocesses for reading keyboard on Mac."""
-    # pylint: disable=import-error,too-many-locals
-    # Note Objective C does not support a Unix style fork.
-    # So these imports have to be inside the child subprocess since
-    # otherwise the child process cannot use them.
-
-    # pylint: disable=no-member, no-name-in-module
-    from AppKit import NSApplication, NSApp
-    from Foundation import NSObject
-    from Cocoa import NSEvent, NSKeyDownMask, NSKeyUpMask, NSFlagsChangedMask
-    from PyObjCTools import AppHelper
-    import objc
-
-    class MacKeyboardSetup(NSObject):
-        """Setup the handler."""
-
-        @objc.python_method
-        def init_with_handler(self, handler):
-            """
-            Init method that receives the write end of the pipe.
-            """
-            # ALWAYS call the super's designated initializer.
-            # Also, make sure to re-bind "self" just in case it
-            # returns something else!
-
-            # pylint: disable=self-cls-assignment
-            self = super(MacKeyboardSetup, self).init()
-
-            self.handler = handler
-
-            # Unlike Python's __init__, initializers MUST return self,
-            # because they are allowed to return any object!
-            return self
-
-        # pylint: disable=invalid-name, unused-argument
-        def applicationDidFinishLaunching_(self, notification):
-            """Bind the handler to listen to keyboard events."""
-            mask = NSKeyDownMask | NSKeyUpMask | NSFlagsChangedMask
-            NSEvent.addGlobalMonitorForEventsMatchingMask_handler_(mask, self.handler)
-
-    class MacKeyboardListener(AppKitKeyboardListener):
-        """Loosely emulate Evdev keyboard behaviour on the Mac.
-        Listen for key events then buffer them in a pipe.
-        """
-
-        def install_handle_input(self):
-            """Install the hook."""
-            self.app = NSApplication.sharedApplication()
-            # pylint: disable=no-member
-            delegate = MacKeyboardSetup.alloc().init_with_handler(self.handle_input)
-            NSApp().setDelegate_(delegate)
-            AppHelper.runEventLoop()
-
-        def __del__(self):
-            """Stop the listener on deletion."""
-            AppHelper.stopEventLoop()
-
-    # pylint: disable=unused-variable
-    keyboard = MacKeyboardListener(pipe)
-
-
-class Keyboard(InputDevice):
-    """A keyboard or other key-like device.
-
-    Original umapped scan code, followed by the important key info
-    followed by a sync.
-    """
-
-    def _set_device_path(self):
-        super(Keyboard, self)._set_device_path()
-        if MAC:
-            self._device_path = APPKIT_KB_PATH
-
-    def _set_name(self):
-        super(Keyboard, self)._set_name()
-        if WIN:
-            self.name = "Microsoft Keyboard"
-        elif MAC:
-            self.name = "AppKit Keyboard"
-
-    @staticmethod
-    def _get_target_function():
-        """Get the correct target function."""
-        if WIN:
-            return keyboard_process
-        if MAC:
-            return mac_keyboard_process
-        return None
-
-    def _get_data(self, read_size):
-        """Get data from the character device."""
-        if NIX:
-            return super(Keyboard, self)._get_data(read_size)
-        return self._pipe.recv_bytes()
-
-
-
-
-class OtherDevice(InputDevice):
-    """A device of which its is type is either undetectable or has not
-    been implemented yet.
-    """
-
-    pass
 
 
 

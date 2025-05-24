@@ -186,3 +186,11 @@ class InputDevice(object):  # pylint: disable=useless-object-inheritance
             if WIN or MAC:
                 if self.__pipe:
                     self._listener.terminate()
+
+
+class OtherDevice(InputDevice):
+    """A device of which its is type is either undetectable or has not
+    been implemented yet.
+    """
+
+    pass
