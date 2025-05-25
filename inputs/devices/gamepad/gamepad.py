@@ -8,7 +8,6 @@
 
 import codecs
 import ctypes
-from fcntl import ioctl
 import io
 from multiprocessing import Process
 import os
@@ -23,6 +22,9 @@ from ...libi.c import EVENT_FORMAT, convert_timeval
 from ...libi.system import NIX, WIN
 from ..base import InputDevice
 from ._win import XinputGamepad, XinputState, XinputVibration, delay_and_stop
+
+if NIX:
+    from fcntl import ioctl
 
 
 class GamePad(InputDevice):
