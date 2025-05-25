@@ -6,13 +6,8 @@ import platform
 import inputs
 
 
-try:
-    from setuptools import setup
-except ImportError:
-    SETUPTOOLS = False
-    from distutils.core import setup
-else:
-    SETUPTOOLS = True
+from setuptools import setup
+
 
 # Unit Tests require mock on Python 2
 TESTS_REQUIRE = []
@@ -31,7 +26,6 @@ if MAC:
     INSTALL_REQUIRES.append("pyobjc-framework-Quartz")
 
 INPUTS_CLASSIFIERS = [
-    "Programming Language :: Python :: 2.7",
     "Programming Language :: Python :: 3",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: BSD License",
@@ -62,10 +56,10 @@ KWARGS = {
     "url": "https://github.com/zeth/inputs",
 }
 
-if SETUPTOOLS:
-    KWARGS["tests_require"] = TESTS_REQUIRE
-    KWARGS["test_suite"] = "tests"
-    KWARGS["install_requires"] = INSTALL_REQUIRES
+
+KWARGS["tests_require"] = TESTS_REQUIRE
+KWARGS["test_suite"] = "tests"
+KWARGS["install_requires"] = INSTALL_REQUIRES
 
 
 setup(**KWARGS)
