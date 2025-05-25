@@ -3,20 +3,10 @@
 from __future__ import with_statement
 import platform
 
-import inputs
-
-
 from setuptools import setup
 
+import inputs
 
-# Unit Tests require mock on Python 2
-TESTS_REQUIRE = []
-try:
-    # pylint: disable=unused-import
-    import unittest.mock
-except ImportError:
-    TESTS_REQUIRE.append("mock")
-    TESTS_REQUIRE.append("pathlib2")
 
 INSTALL_REQUIRES = []
 
@@ -57,7 +47,7 @@ KWARGS = {
 }
 
 
-KWARGS["tests_require"] = TESTS_REQUIRE
+KWARGS["tests_require"] = []
 KWARGS["test_suite"] = "tests"
 KWARGS["install_requires"] = INSTALL_REQUIRES
 
