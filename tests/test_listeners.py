@@ -144,7 +144,7 @@ class BaseListenerTestCase(TestCase):
 
     def test_emulate_wheel_win(self):
         """Returns an event list for the mouse wheel turn on Windows."""
-        inputs.platforms.baselistener.WIN = True
+        inputs.libi.baselistener.WIN = True
         pipe = mock.MagicMock()
         listener = BaseListener(pipe)
         eventlist = listener.emulate_wheel(240, "x", (100, 1))
@@ -154,7 +154,7 @@ class BaseListenerTestCase(TestCase):
         eventlist = listener.emulate_wheel(-240, "x", (100, 1))
         event_info = next(iter_unpack(eventlist))
         self.assertEqual(event_info, (100, 1, 2, 6, -2))
-        inputs.platforms.baselistener.WIN = False
+        inputs.libi.baselistener.WIN = False
 
     def test_emulate_rel(self):
         """Returns an event list for relative mouse movement."""
