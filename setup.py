@@ -55,7 +55,7 @@ KWARGS = {
     "version": inputs.__version__,
     "author": "Zeth",
     "author_email": "theology@gmail.com",
-    "py_modules": ["inputs"],
+    "packages": ["inputs"],
     "long_description": INPUTS_LONG_DESCRIPTION,
     "license": "BSD",
     "classifiers": INPUTS_CLASSIFIERS,
