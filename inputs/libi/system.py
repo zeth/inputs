@@ -1,3 +1,5 @@
+"""Constants for system detection."""
+
 import platform
 
 WIN = True if platform.system() == "Windows" else False

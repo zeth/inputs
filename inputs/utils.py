@@ -1,3 +1,5 @@
+"""High level input utilities for reading from keyboards, mice, and gamepads."""
+
 from . import DeviceManager
 from .libi.errors import UnpluggedError
 

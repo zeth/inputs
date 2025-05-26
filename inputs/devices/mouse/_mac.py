@@ -1,3 +1,5 @@
+"""Keep all the Mac mouse wrapped so the Python coder doesn't have to care about Objective C."""
+
 from ...constants import MAC_EVENT_CODES
 from ...libi.baselistener import BaseListener
 

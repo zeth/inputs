@@ -1,3 +1,6 @@
+"""Represents an input event in Python."""
+
+
 class InputEvent:
     """A user event."""
 

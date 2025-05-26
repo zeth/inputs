@@ -1,3 +1,5 @@
+"""Listen for input events and buffer them in a pipe."""
+
 import struct
 import time
 from ..constants import EVENT_TYPES

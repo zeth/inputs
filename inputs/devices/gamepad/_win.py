@@ -1,3 +1,5 @@
+"""Keep the gamepad details wrapped so the Python coder doesn't have to care about C."""
+
 import ctypes
 import time
 

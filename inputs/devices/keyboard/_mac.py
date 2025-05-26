@@ -1,3 +1,5 @@
+"""Keep all the Mac keyboard wrapped so the Python coder doesn't have to care about Objective C."""
+
 from ...constants import MAC_KEYS
 from ...libi.baselistener import BaseListener
 

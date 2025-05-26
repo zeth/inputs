@@ -1,3 +1,5 @@
+"""Keep the Windows keyboard details wrapped so the Python coder doesn't have to care about C."""
+
 import ctypes
 
 from ...constants import WIN_KEYBOARD_CODES

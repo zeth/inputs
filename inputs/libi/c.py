@@ -1,3 +1,5 @@
+"""Dealing with the low-level input event structures."""
+
 import ctypes
 import struct
 import math
