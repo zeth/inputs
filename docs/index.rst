@@ -6,7 +6,7 @@
 Welcome to the inputs documentation!
 ====================================
 
-Release v\ 0.5
+Release v\ 0.6
 
 .. image:: https://img.shields.io/github/license/zeth/inputs.svg
     :target: https://pypi.org/project/inputs/

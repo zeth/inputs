@@ -1,7 +1,13 @@
 CHANGELOG
 =========
 
-0.5
+0.6
+---
+
+* Turn from a module into a package.
+* Remove support for older Python versions.
+
+0.6
 ---
 
 * Gamepad Vibration support on Linux
