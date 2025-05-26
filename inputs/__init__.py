@@ -39,29 +39,28 @@ Mac OS X.
 # ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 # POSSIBILITY OF SUCH DAMAGE.
 
-import os
-import glob
-from warnings import warn
-import ctypes
-
-
-from .constants import (
-    XINPUT_DLL_NAMES,
-    XINPUT_ERROR_DEVICE_NOT_CONNECTED,
-    XINPUT_ERROR_SUCCESS,
-    EVENT_MAP,
-)
-
-from .libi.errors import UnknownEventType, UnknownEventCode
-
-from .libi.system import WIN, MAC, NIX
-from .libi.c import DWORD, HANDLE
 from .devices.gamepad.gamepad import GamePad
 from .devices.base import OtherDevice
-from .devices.gamepad._win import XinputState
 from .devices.mouse.mouse import Mouse, MightyMouse
 from .devices.keyboard.keyboard import Keyboard
 from .devices.led.led import LED, GamepadLED, SystemLED
 from .manager import DeviceManager
+from .utils import devices, get_gamepad, get_key, get_mouse
 
 __version__ = "0.6"
+
+__all__ = [
+    "GamePad",
+    "Mouse",
+    "MightyMouse",
+    "Keyboard",
+    "LED",
+    "GamepadLED",
+    "SystemLED",
+    "OtherDevice",
+    "DeviceManager",
+    "devices",
+    "get_gamepad",
+    "get_key",
+    "get_mouse",
+]
