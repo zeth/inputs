@@ -3,7 +3,7 @@
 from __future__ import with_statement
 import platform
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 import inputs
 
@@ -39,7 +39,7 @@ KWARGS = {
     "version": inputs.__version__,
     "author": "Zeth",
     "author_email": "theology@gmail.com",
-    "packages": ["inputs"],
+    "packages": find_packages(),
     "long_description": INPUTS_LONG_DESCRIPTION,
     "license": "BSD",
     "classifiers": INPUTS_CLASSIFIERS,
